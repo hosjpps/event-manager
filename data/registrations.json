@@ -1,0 +1,42 @@
+[
+    {
+        "id": 1,
+        "event_id": 1,
+        "participant": "Иван Петров",
+        "email": "petrov@edu.mirea.ru",
+        "status": "registered",
+        "registered_at": "2026-09-20T10:15"
+    },
+    {
+        "id": 2,
+        "event_id": 2,
+        "participant": "Анна Смирнова",
+        "email": "smirnova@edu.mirea.ru",
+        "status": "registered",
+        "registered_at": "2026-09-21T09:00"
+    },
+    {
+        "id": 3,
+        "event_id": 2,
+        "participant": "Олег Ким",
+        "email": "kim@edu.mirea.ru",
+        "status": "registered",
+        "registered_at": "2026-09-21T09:30"
+    },
+    {
+        "id": 4,
+        "event_id": 2,
+        "participant": "Мария Орлова",
+        "email": "orlova@edu.mirea.ru",
+        "status": "registered",
+        "registered_at": "2026-09-21T11:00"
+    },
+    {
+        "id": 5,
+        "event_id": 2,
+        "participant": "Денис Волков",
+        "email": "volkov@edu.mirea.ru",
+        "status": "waitlist",
+        "registered_at": "2026-09-22T08:45"
+    }
+]
