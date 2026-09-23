@@ -7,7 +7,8 @@ from events import (add_event, days_until_event, find_events, get_free_seats,
                     get_upcoming_events)
 from registrations import (cancel_registration, count_registered,
                            get_event_participants, get_registration_status,
-                           get_statistics, register_participant)
+                           get_statistics, is_registration_open,
+                           register_participant)
 from utils import format_datetime, input_datetime, input_int, input_text
 from venues import add_venue, filter_venues_by_capacity, sort_venues
 
@@ -103,17 +104,19 @@ def check_registration(data: dict) -> bool:
     if event is None:
         print("Мероприятие не найдено.")
         return False
+    now = datetime.now()
     registered = count_registered(data["registrations"], event["id"])
     free_seats = get_free_seats(event["capacity"], registered)
-    days_left = days_until_event(
-        event["starts_at"].date(), datetime.now().date()
-    )
+    days_left = days_until_event(event["starts_at"].date(), now.date())
     print(f"{event['title']}: {format_datetime(event['starts_at'])}, "
           f"через {days_left} дн.")
     print(f"Зарегистрировано {registered} из {event['capacity']}, "
           f"свободно {free_seats}")
-    print(get_registration_status(event["is_published"], free_seats,
-                                  days_left))
+    if event["is_published"] and not is_registration_open(event, now):
+        print("Мероприятие уже началось, регистрация закрыта")
+    else:
+        print(get_registration_status(event["is_published"], free_seats,
+                                      days_left))
     return False
 
 

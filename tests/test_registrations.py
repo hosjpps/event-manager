@@ -3,7 +3,8 @@ from datetime import datetime
 import pytest
 
 from registrations import (cancel_registration, get_registration_status,
-                           get_statistics, register_participant)
+                           get_statistics, is_registration_open,
+                           register_participant)
 
 NOW = datetime(2026, 10, 1, 12)
 
@@ -72,3 +73,9 @@ def test_statistics():
     assert stats["registered"] == 2
     assert stats["waitlist"] == 1
     assert stats["average_fill_percent"] == 100.0
+
+
+def test_registration_open_until_event_start():
+    event = make_events()[1]
+    assert is_registration_open(event, datetime(2026, 10, 20, 13, 59))
+    assert not is_registration_open(event, datetime(2026, 10, 20, 14, 0))

@@ -23,6 +23,11 @@ def get_registration_status(
         return "Мест нет, можно встать в лист ожидания"
 
 
+def is_registration_open(event: dict, now: datetime) -> bool:
+    """Вернуть True, если мероприятие опубликовано и ещё не началось."""
+    return event["is_published"] and event["starts_at"] > now
+
+
 def count_registered(registrations: list[dict], event_id: int) -> int:
     """Вернуть число подтверждённых участников мероприятия."""
     return sum(
@@ -49,7 +54,7 @@ def register_participant(
     if event_id not in events:
         raise KeyError(f"Мероприятие с id={event_id} не найдено")
     event = events[event_id]
-    if not event["is_published"] or event["starts_at"] <= now:
+    if not is_registration_open(event, now):
         raise ValueError("Регистрация на это мероприятие закрыта")
     email = email.strip().lower()
     for r in registrations:
