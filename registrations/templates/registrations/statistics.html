@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block title %}
+    Статистика – Event Manager
+{% endblock %}
+
+{% block content %}
+    <h1>Статистика</h1>
+
+    <p>
+        Участников: {{ totals.registered }},
+        в листе ожидания: {{ totals.waitlist }}
+    </p>
+
+    <h2>Заполненность мероприятий</h2>
+    <ul class="list-group mb-4">
+        {% for item in by_event %}
+            <li class="list-group-item">
+                {{ item.event_title }}:
+                {{ item.registered_count }} из {{ item.capacity }}
+            </li>
+        {% empty %}
+            <li class="list-group-item">Данные отсутствуют.</li>
+        {% endfor %}
+    </ul>
+
+    <h2>Мероприятия по площадкам</h2>
+    <ul class="list-group mb-4">
+        {% for item in by_venue %}
+            <li class="list-group-item">
+                {{ item.venue_name }}: {{ item.events_count }}
+            </li>
+        {% empty %}
+            <li class="list-group-item">Данные отсутствуют.</li>
+        {% endfor %}
+    </ul>
+
+    <h2>Мероприятия с листом ожидания</h2>
+    <ul class="list-group">
+        {% for item in with_waitlist %}
+            <li class="list-group-item">
+                {{ item.event_title }}: в очереди {{ item.waitlist_count }}
+            </li>
+        {% empty %}
+            <li class="list-group-item">Листов ожидания нет.</li>
+        {% endfor %}
+    </ul>
+{% endblock %}

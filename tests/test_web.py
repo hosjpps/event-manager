@@ -79,3 +79,33 @@ def test_event_date_is_formatted_by_filter(client):
 def test_missing_object_shows_message_in_template(client):
     html = client.get("/events/999/").content.decode()
     assert "Мероприятие не найдено" in html
+
+
+def test_available_venues_form_without_date(client):
+    response = client.get("/venues/available/")
+    assert response.status_code == 200
+    assert "Свободные площадки" in response.content.decode()
+
+
+def test_available_venues_for_busy_date(client):
+    html = client.get("/venues/available/?date=2026-10-15").content.decode()
+    assert "Актовый зал" not in html
+    assert "Коворкинг" in html
+
+
+def test_available_venues_rejects_bad_date(client):
+    html = client.get("/venues/available/?date=15.10.2026").content.decode()
+    assert "ГГГГ-ММ-ДД" in html
+
+
+def test_available_venues_is_not_vulnerable_to_injection(client):
+    response = client.get("/venues/available/?date=' OR 1=1 --")
+    assert response.status_code == 200
+    assert "Актовый зал" not in response.content.decode()
+
+
+def test_statistics_page(client):
+    html = client.get("/registrations/statistics/").content.decode()
+    assert "Участников: 4" in html
+    assert "в листе ожидания: 1" in html
+    assert "Семинар по Git" in html

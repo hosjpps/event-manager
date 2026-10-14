@@ -31,7 +31,7 @@
 
                 <p class="card-text">
                     <strong>Занятость сегодня:</strong>
-                    {% if is_free_today %}
+                    {% if venue.is_free_today %}
                         <span class="badge bg-success">свободна</span>
                     {% else %}
                         <span class="badge bg-danger">

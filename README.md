@@ -2,7 +2,7 @@
 
 Приложение для учёта площадок организации, её мероприятий и регистрации
 участников. Консольная версия (ПР1–ПР3) дополнена веб-интерфейсом на Django
-(ПР5) и шаблонами (ПР6).
+(ПР5), шаблонами (ПР6) и базой данных SQLite (ПР7).
 
 ## Назначение
 
@@ -90,9 +90,8 @@ Registration ──event──▶ Event ──venue──▶ Venue
 ## Веб-интерфейс на Django (ПР5, ПР6)
 
 Используются Django 5.2, Django Template Language, HTML5, CSS, JavaScript и
-Bootstrap 5.3 (через CDN). Источник данных веб-страниц — JSON-файлы и
-объекты из `models/`; Django ORM и база данных пока не используются, веб-формы
-ещё не реализованы.
+Bootstrap 5.3 (через CDN). Веб-страницы получают данные из базы SQLite SQL-запросами
+(см. ниже); Django ORM пока не используется, веб-формы ещё не реализованы.
 
 Django-проект `eventmanager` включает четыре приложения: `homepage` (главная,
 статические файлы), `venues` (площадки), `events` (мероприятия),
@@ -103,10 +102,12 @@ Django-проект `eventmanager` включает четыре приложе�
 |-----|--------------|--------------|------------|
 | `/` | `homepage:index` | `homepage.views.index` | главная страница |
 | `/venues/` | `venues:list` | `venues.views.venues` | список площадок |
+| `/venues/available/` | `venues:available` | `venues.views.available_venues` | свободные площадки на дату |
 | `/venues/<int:venue_id>/` | `venues:detail` | `venues.views.venue_detail` | площадка и занятость сегодня |
 | `/events/` | `events:list` | `events.views.events` | мероприятия по датам |
 | `/events/<int:event_id>/` | `events:detail` | `events.views.event_detail` | свободные места, статус регистрации |
 | `/registrations/` | `registrations:list` | `registrations.views.registrations` | список регистраций |
+| `/registrations/statistics/` | `registrations:statistics` | `registrations.views.statistics` | статистика |
 | `/registrations/<int:registration_id>/` | `registrations:detail` | `registrations.views.registration_detail` | регистрация |
 
 Маршрутизация двухуровневая: `eventmanager/urls.py` подключает `urls.py`
@@ -138,6 +139,46 @@ Django-проект `eventmanager` включает четыре приложе�
 Страницы открыты без авторизации; e-mail участников в веб-интерфейсе не
 выводятся. Пользователи и разграничение доступа запланированы.
 
+## База данных SQLite и SQL (ПР7)
+
+Файл базы — `data/event_manager.sqlite`. Работа ведётся через стандартный
+модуль `sqlite3`, без Django ORM. Структура (`sql/schema.sql`):
+
+| Таблица | Поля | Ключи и ограничения |
+|---------|------|---------------------|
+| `venues` | `id`, `name`, `address`, `capacity` | PK `id`; `name` уникально; `capacity > 0` |
+| `events` | `id`, `title`, `venue_id`, `starts_at`, `ends_at`, `capacity`, `is_published` | PK `id`; FK `venue_id → venues.id` |
+| `registrations` | `id`, `event_id`, `participant`, `email`, `status`, `registered_at` | PK `id`; FK `event_id → events.id`; `status` ∈ {registered, waitlist, cancelled} |
+
+Связи: на одной площадке проходит несколько мероприятий; на мероприятие
+приходится несколько регистраций. Даты хранятся строками ISO 8601, логический
+признак `is_published` — числом 0/1.
+
+- `sql/schema.sql` — создание таблиц;
+- `sql/queries.sql` — 14 проверенных запросов с комментариями: выборки,
+  `WHERE`, `JOIN` (в том числе трёх таблиц), агрегаты `COUNT`/`AVG`/`MAX`,
+  `GROUP BY`, `HAVING`, `LIMIT`;
+- `db/database.py` — `get_connection()`: `PRAGMA foreign_keys = ON` и
+  `sqlite3.Row` (доступ к полям по имени, в том числе из шаблонов);
+- `db/import_json.py` — создаёт схему и переносит данные из JSON
+  (`executemany`, откат при ошибке; импорт можно повторять).
+
+Значения всегда передаются параметрами `?`, а не подстановкой в текст запроса.
+
+Создание и наполнение базы с нуля:
+
+```bash
+python -m db.import_json
+sqlite3 data/event_manager.sqlite    # проверка запросов в SQLite CLI
+```
+
+Страницы, использующие SQL: `/venues/` и `/venues/<id>/`, `/events/` и
+`/events/<id>/`, `/registrations/` (активные регистрации, JOIN трёх таблиц),
+`/registrations/<id>/`, `/venues/available/?date=ГГГГ-ММ-ДД` (поиск свободных
+площадок на дату) и `/registrations/statistics/` (статистика: участники,
+заполненность мероприятий, мероприятия по площадкам, листы ожидания).
+JSON-файлы остаются источником данных консольной версии и импорта.
+
 ## Структура проекта
 
 - `manage.py`, `eventmanager/` — Django-проект (настройки, корневые маршруты);
@@ -151,7 +192,8 @@ Django-проект `eventmanager` включает четыре приложе�
   идентификаторы `venue_id` и `event_id`, при загрузке восстанавливаются
   ссылки на объекты);
 - `utils.py` — идентификаторы, разбор дат, безопасный ввод;
-- `data/` — JSON-файлы данных;
+- `db/`, `sql/` — подключение к SQLite, импорт из JSON, схема и запросы;
+- `data/` — JSON-файлы данных и база `event_manager.sqlite`;
 - `tests/` — автоматизированные тесты pytest, включая проверку страниц.
 
 ## Формат данных
@@ -206,7 +248,6 @@ pip install -r requirements.txt
 Веб-версия (Django):
 
 ```bash
-python manage.py migrate   # один раз
 python manage.py runserver
 ```
 
@@ -230,7 +271,7 @@ flake8
 
 ## План развития
 
-- база данных и модели Django;
+- модели Django и ORM вместо прямых SQL-запросов;
 - пользователи и разграничение доступа;
 - REST API;
 - контейнеризация в Docker и CI/CD.

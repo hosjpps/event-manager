@@ -22,14 +22,14 @@
 
                 <p class="card-text">
                     <strong>Мероприятие:</strong>
-                    <a href="{% url 'events:detail' registration.event.id %}">
-                        {{ registration.event.title }}
+                    <a href="{% url 'events:detail' registration.event_id %}">
+                        {{ registration.event_title }}
                     </a>
                 </p>
 
                 <p class="card-text">
                     <strong>Дата регистрации:</strong>
-                    {{ registration.registered_at|date:"d.m.Y H:i" }}
+                    {{ registration.registered_at_text }}
                 </p>
 
                 <p class="card-text">

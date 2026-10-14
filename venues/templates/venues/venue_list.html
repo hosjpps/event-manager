@@ -11,6 +11,12 @@
         Всего площадок: {{ venues|length }}
     </p>
 
+    <p>
+        <a href="{% url 'venues:available' %}">
+            Найти свободную площадку
+        </a>
+    </p>
+
     {% for venue in venues %}
         {% include "venues/includes/venue_card.html" %}
     {% empty %}

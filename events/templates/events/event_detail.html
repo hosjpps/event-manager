@@ -18,33 +18,33 @@
 
                 <p class="card-text">
                     <strong>Площадка:</strong>
-                    <a href="{% url 'venues:detail' event.venue.id %}">
-                        {{ event.venue.name }}
+                    <a href="{% url 'venues:detail' event.venue_id %}">
+                        {{ event.venue_name }}
                     </a>
                 </p>
 
                 <p class="card-text">
                     <strong>Начало:</strong>
-                    {{ event.starts_at|date:"d.m.Y H:i" }}
-                    {% if days_left >= 0 %}
-                        (через {{ days_left }} дн.)
+                    {{ event.starts_at_text }}
+                    {% if event.days_left >= 0 %}
+                        (через {{ event.days_left }} дн.)
                     {% endif %}
                 </p>
 
                 <p class="card-text">
                     <strong>Окончание:</strong>
-                    {{ event.ends_at|date:"d.m.Y H:i" }}
+                    {{ event.ends_at_text }}
                 </p>
 
                 <p class="card-text">
                     <strong>Мест:</strong> {{ event.capacity }},
-                    зарегистрировано {{ registered }},
+                    зарегистрировано {{ event.registered }},
                     свободно {{ free_seats }}
                 </p>
 
                 <p class="card-text">
                     <strong>Регистрация:</strong>
-                    {% if free_seats > 0 and days_left >= 0 %}
+                    {% if free_seats > 0 and event.days_left >= 0 %}
                         <span class="badge bg-success">{{ status }}</span>
                     {% else %}
                         <span class="badge bg-danger">{{ status }}</span>

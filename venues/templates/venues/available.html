@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block title %}
+    Свободные площадки – Event Manager
+{% endblock %}
+
+{% block content %}
+    <h1>Свободные площадки</h1>
+
+    <form method="get" class="mb-3">
+        <label for="date" class="form-label">Дата:</label>
+        <input
+            type="date"
+            id="date"
+            name="date"
+            value="{{ event_date|default:'' }}"
+            class="form-control w-auto d-inline-block"
+        >
+        <button type="submit" class="btn btn-primary">Найти</button>
+    </form>
+
+    {% if error %}
+        <p class="text-danger">{{ error }}</p>
+    {% elif event_date %}
+        <h2>Дата: {{ event_date }}</h2>
+        {% for venue in venues %}
+            {% include "venues/includes/venue_card.html" %}
+        {% empty %}
+            <p>На выбранную дату свободных площадок нет.</p>
+        {% endfor %}
+    {% endif %}
+
+    <a href="{% url 'venues:list' %}" class="btn btn-outline-secondary mt-3">
+        ← ко всем площадкам
+    </a>
+{% endblock %}

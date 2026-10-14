@@ -16,7 +16,7 @@
             <li class="list-group-item d-flex justify-content-between">
                 <a href="{% url 'registrations:detail' registration.id %}">
                     {{ registration.participant }} –
-                    {{ registration.event.title }}
+                    {{ registration.event_title }}
                 </a>
                 {% include "registrations/includes/registration_status.html" %}
             </li>

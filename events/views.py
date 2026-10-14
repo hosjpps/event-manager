@@ -1,45 +1,71 @@
+from contextlib import closing
 from datetime import date
 
 from django.shortcuts import render
 
-from models.events import find_event_by_id, get_free_seats, sort_events_by_date
-from models.registrations import count_registered, get_registration_status
-from storage import load_all
+from db.database import get_connection
+from models.events import get_free_seats
+from models.registrations import get_registration_status
+
+EVENT_SELECT = """
+    SELECT
+        events.id,
+        events.title,
+        events.venue_id,
+        venues.name AS venue_name,
+        strftime('%d.%m.%Y %H:%M', events.starts_at) AS starts_at_text,
+        strftime('%d.%m.%Y %H:%M', events.ends_at) AS ends_at_text,
+        events.capacity,
+        events.is_published,
+        CAST(
+            julianday(substr(events.starts_at, 1, 10)) - julianday(?)
+            AS INTEGER
+        ) AS days_left,
+        COUNT(registrations.id) AS registered
+    FROM events
+    JOIN venues ON events.venue_id = venues.id
+    LEFT JOIN registrations
+        ON registrations.event_id = events.id
+        AND registrations.status = 'registered'
+"""
 
 
 def events(request):
-    _, events_list, _ = load_all()
-
-    context = {
-        "events": sort_events_by_date(events_list),
-    }
+    with closing(get_connection()) as conn:
+        events_list = conn.execute(
+            EVENT_SELECT + """
+            GROUP BY events.id, venues.name
+            ORDER BY events.starts_at;
+            """,
+            [date.today().isoformat()],
+        ).fetchall()
 
     return render(
         request,
         "events/event_list.html",
-        context,
+        {"events": events_list},
     )
 
 
 def event_detail(request, event_id):
-    _, events_list, registrations_list = load_all()
-    event = find_event_by_id(events_list, event_id)
+    with closing(get_connection()) as conn:
+        event = conn.execute(
+            EVENT_SELECT + """
+            WHERE events.id = ?
+            GROUP BY events.id, venues.name;
+            """,
+            [date.today().isoformat(), event_id],
+        ).fetchone()
 
-    context = {
-        "event": event,
-    }
+    context = {"event": event}
     if event is not None:
-        registered = count_registered(registrations_list, event)
-        free_seats = get_free_seats(event.capacity, registered)
-        days_left = event.days_until(date.today())
+        free_seats = get_free_seats(event["capacity"], event["registered"])
         context.update({
-            "registered": registered,
             "free_seats": free_seats,
-            "days_left": days_left,
             "status": get_registration_status(
-                event.is_published,
+                bool(event["is_published"]),
                 free_seats,
-                days_left,
+                event["days_left"],
             ),
         })
 
