@@ -1,2 +1,4 @@
 [flake8]
 exclude = .venv,__pycache__,.pytest_cache
+per-file-ignores =
+    eventmanager/settings.py: E501

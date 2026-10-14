@@ -1,7 +1,8 @@
 # Сервис управления мероприятиями организации
 
-Консольное приложение для учёта площадок организации, её мероприятий
-и регистрации участников.
+Приложение для учёта площадок организации, её мероприятий и регистрации
+участников. Консольная версия (ПР1–ПР3) дополнена веб-интерфейсом на Django
+(ПР5).
 
 ## Назначение
 
@@ -86,9 +87,42 @@ Registration ──event──▶ Event ──venue──▶ Venue
 `cancel_registration()`, `get_statistics()` и др.) работают с коллекциями
 объектов и вызывают методы классов, не дублируя их логику.
 
+## Веб-интерфейс на Django (ПР5)
+
+Используются Django 5.2, HTML и Bootstrap 5.3 (подключается через CDN).
+Источник данных веб-страниц — JSON-файлы и объекты из `models/`
+(Django ORM и база данных пока не используются).
+
+Django-проект `eventmanager` включает четыре приложения: `homepage` (главная
+и общий каркас страниц), `venues` (площадки), `events` (мероприятия),
+`registrations` (регистрации). Отдельного приложения для пользователей нет:
+участники — это регистрации, встроенная модель `User` Django не нужна.
+
+| URL | View-функция | Назначение |
+|-----|--------------|------------|
+| `/` | `homepage.views.index` | главная страница и навигация |
+| `/venues/` | `venues.views.venues` | список площадок |
+| `/venues/<int:venue_id>/` | `venues.views.venue_detail` | площадка и её занятость сегодня |
+| `/events/` | `events.views.events` | мероприятия по датам |
+| `/events/<int:event_id>/` | `events.views.event_detail` | мероприятие, свободные места, статус регистрации |
+| `/registrations/` | `registrations.views.registrations` | список регистраций |
+| `/registrations/<int:registration_id>/` | `registrations.views.registration_detail` | регистрация |
+
+Маршрутизация двухуровневая: `eventmanager/urls.py` подключает `urls.py`
+приложений через `include()`. Если объект с указанным id не найден, страница
+возвращает код 404. Для адресов без маршрута задан `handler404`
+(`homepage.views.page_not_found`); собственную страницу видно при
+`DEBUG = False`. Общий HTML-каркас формирует функция `page()` из
+`homepage/views.py`: кодировка, заголовок, Bootstrap и навигация.
+View-функции вызывают `storage.load_all()`, функции поиска из `models/` и
+выводят атрибуты объектов `Venue`, `Event`, `Registration`.
+
 ## Структура проекта
 
-- `main.py` — точка запуска, меню и вывод данных;
+- `manage.py`, `eventmanager/` — Django-проект (настройки, корневые маршруты);
+- `homepage/`, `venues/`, `events/`, `registrations/` — Django-приложения
+  (`views.py`, `urls.py`);
+- `main.py` — консольная версия приложения (сохранена);
 - `models/` — классы и функции предметной области:
   `venues.py`, `events.py`, `registrations.py`;
 - `storage.py` — преобразование JSON ↔ объекты (в JSON хранятся
@@ -96,7 +130,7 @@ Registration ──event──▶ Event ──venue──▶ Venue
   ссылки на объекты);
 - `utils.py` — идентификаторы, разбор дат, безопасный ввод;
 - `data/` — JSON-файлы данных;
-- `tests/` — автоматизированные тесты pytest.
+- `tests/` — автоматизированные тесты pytest, включая проверку страниц.
 
 ## Формат данных
 
@@ -133,6 +167,7 @@ ISO 8601.
 ## Требования
 
 - Python 3.10+;
+- Django 5.2;
 - pytest;
 - flake8.
 
@@ -145,6 +180,15 @@ pip install -r requirements.txt
 ```
 
 ## Запуск программы
+
+Веб-версия (Django):
+
+```bash
+python manage.py migrate   # один раз
+python manage.py runserver
+```
+
+Затем открыть http://127.0.0.1:8000/. Консольная версия:
 
 ```bash
 python main.py
@@ -164,7 +208,8 @@ flake8
 
 ## План развития
 
-- веб-приложение на Django, база данных и модели;
+- шаблоны Django вместо HTML в Python-строках;
+- база данных и модели Django;
 - пользователи и разграничение доступа;
 - REST API;
 - контейнеризация в Docker и CI/CD.

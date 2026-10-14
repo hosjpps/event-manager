@@ -11,3 +11,6 @@ __pycache__/
 .vscode/
 .idea/
 .DS_Store
+
+# Служебная база Django (ПР5 не использует ORM)
+db.sqlite3

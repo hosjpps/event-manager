@@ -133,3 +133,10 @@ def save_registrations(
          "registered_at": _format(r.registered_at)}
         for r in registrations
     ])
+
+
+def load_all() -> tuple[list[Venue], list[Event], list[Registration]]:
+    """Загрузить площадки, мероприятия и регистрации со связями объектов."""
+    venues = load_venues()
+    events = load_events(venues)
+    return venues, events, load_registrations(events)
