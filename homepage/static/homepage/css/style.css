@@ -1,0 +1,21 @@
+body {
+    min-height: 100vh;
+}
+
+.event-logo {
+    width: 96px;
+    height: auto;
+    margin: 1rem 0;
+}
+
+.venue-card,
+.event-card {
+    margin-bottom: 1rem;
+    padding: 1rem;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+}
+
+.registration-status {
+    font-weight: 600;
+}

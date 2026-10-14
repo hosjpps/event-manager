@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+
+{% block title %}
+    {% if event %}
+        {{ event.title }} – Event Manager
+    {% else %}
+        Мероприятие не найдено – Event Manager
+    {% endif %}
+{% endblock %}
+
+{% block content %}
+    {% if event %}
+        <div class="card">
+            <div class="card-body">
+                <h1 class="card-title">
+                    {{ event.title }}
+                </h1>
+
+                <p class="card-text">
+                    <strong>Площадка:</strong>
+                    <a href="{% url 'venues:detail' event.venue.id %}">
+                        {{ event.venue.name }}
+                    </a>
+                </p>
+
+                <p class="card-text">
+                    <strong>Начало:</strong>
+                    {{ event.starts_at|date:"d.m.Y H:i" }}
+                    {% if days_left >= 0 %}
+                        (через {{ days_left }} дн.)
+                    {% endif %}
+                </p>
+
+                <p class="card-text">
+                    <strong>Окончание:</strong>
+                    {{ event.ends_at|date:"d.m.Y H:i" }}
+                </p>
+
+                <p class="card-text">
+                    <strong>Мест:</strong> {{ event.capacity }},
+                    зарегистрировано {{ registered }},
+                    свободно {{ free_seats }}
+                </p>
+
+                <p class="card-text">
+                    <strong>Регистрация:</strong>
+                    {% if free_seats > 0 and days_left >= 0 %}
+                        <span class="badge bg-success">{{ status }}</span>
+                    {% else %}
+                        <span class="badge bg-danger">{{ status }}</span>
+                    {% endif %}
+                </p>
+            </div>
+        </div>
+    {% else %}
+        <h1 class="text-danger">
+            Мероприятие не найдено
+        </h1>
+        <p>
+            Мероприятие с указанным идентификатором отсутствует.
+        </p>
+    {% endif %}
+
+    <a
+        href="{% url 'events:list' %}"
+        class="btn btn-outline-secondary mt-3"
+    >
+        ← к списку мероприятий
+    </a>
+{% endblock %}

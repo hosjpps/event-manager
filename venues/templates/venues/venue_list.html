@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+
+{% block title %}
+    Площадки – Event Manager
+{% endblock %}
+
+{% block content %}
+    <h1>Площадки</h1>
+
+    <p>
+        Всего площадок: {{ venues|length }}
+    </p>
+
+    {% for venue in venues %}
+        {% include "venues/includes/venue_card.html" %}
+    {% empty %}
+        <p>Площадки не найдены.</p>
+    {% endfor %}
+{% endblock %}

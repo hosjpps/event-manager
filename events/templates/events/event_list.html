@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+
+{% block title %}
+    Мероприятия – Event Manager
+{% endblock %}
+
+{% block content %}
+    <h1>Мероприятия</h1>
+
+    <p>
+        Всего мероприятий: {{ events|length }}
+    </p>
+
+    {% for event in events %}
+        {% include "events/includes/event_card.html" %}
+    {% empty %}
+        <p>Мероприятия не найдены.</p>
+    {% endfor %}
+{% endblock %}

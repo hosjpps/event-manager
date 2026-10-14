@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block title %}
+    Регистрации – Event Manager
+{% endblock %}
+
+{% block content %}
+    <h1>Регистрации</h1>
+
+    <p>
+        Всего регистраций: {{ registrations|length }}
+    </p>
+
+    <ul class="list-group">
+        {% for registration in registrations %}
+            <li class="list-group-item d-flex justify-content-between">
+                <a href="{% url 'registrations:detail' registration.id %}">
+                    {{ registration.participant }} –
+                    {{ registration.event.title }}
+                </a>
+                {% include "registrations/includes/registration_status.html" %}
+            </li>
+        {% empty %}
+            <li class="list-group-item">Регистрации не найдены.</li>
+        {% endfor %}
+    </ul>
+{% endblock %}

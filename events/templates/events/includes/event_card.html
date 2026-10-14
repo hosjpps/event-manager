@@ -1,0 +1,21 @@
+<article class="card event-card mb-3">
+    <div class="card-body">
+        <h2 class="card-title">
+            {{ event.title|default:"Без названия" }}
+        </h2>
+
+        <p class="card-text">
+            {{ event.starts_at|date:"d.m.Y H:i" }},
+            <a href="{% url 'venues:detail' event.venue.id %}">
+                {{ event.venue.name }}
+            </a>
+        </p>
+
+        <a
+            href="{% url 'events:detail' event.id %}"
+            class="btn btn-primary"
+        >
+            Подробнее
+        </a>
+    </div>
+</article>

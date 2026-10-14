@@ -2,7 +2,7 @@
 
 Приложение для учёта площадок организации, её мероприятий и регистрации
 участников. Консольная версия (ПР1–ПР3) дополнена веб-интерфейсом на Django
-(ПР5).
+(ПР5) и шаблонами (ПР6).
 
 ## Назначение
 
@@ -87,41 +87,63 @@ Registration ──event──▶ Event ──venue──▶ Venue
 `cancel_registration()`, `get_statistics()` и др.) работают с коллекциями
 объектов и вызывают методы классов, не дублируя их логику.
 
-## Веб-интерфейс на Django (ПР5)
+## Веб-интерфейс на Django (ПР5, ПР6)
 
-Используются Django 5.2, HTML и Bootstrap 5.3 (подключается через CDN).
-Источник данных веб-страниц — JSON-файлы и объекты из `models/`
-(Django ORM и база данных пока не используются).
+Используются Django 5.2, Django Template Language, HTML5, CSS, JavaScript и
+Bootstrap 5.3 (через CDN). Источник данных веб-страниц — JSON-файлы и
+объекты из `models/`; Django ORM и база данных пока не используются, веб-формы
+ещё не реализованы.
 
-Django-проект `eventmanager` включает четыре приложения: `homepage` (главная
-и общий каркас страниц), `venues` (площадки), `events` (мероприятия),
+Django-проект `eventmanager` включает четыре приложения: `homepage` (главная,
+статические файлы), `venues` (площадки), `events` (мероприятия),
 `registrations` (регистрации). Отдельного приложения для пользователей нет:
 участники — это регистрации, встроенная модель `User` Django не нужна.
 
-| URL | View-функция | Назначение |
-|-----|--------------|------------|
-| `/` | `homepage.views.index` | главная страница и навигация |
-| `/venues/` | `venues.views.venues` | список площадок |
-| `/venues/<int:venue_id>/` | `venues.views.venue_detail` | площадка и её занятость сегодня |
-| `/events/` | `events.views.events` | мероприятия по датам |
-| `/events/<int:event_id>/` | `events.views.event_detail` | мероприятие, свободные места, статус регистрации |
-| `/registrations/` | `registrations.views.registrations` | список регистраций |
-| `/registrations/<int:registration_id>/` | `registrations.views.registration_detail` | регистрация |
+| URL | Имя маршрута | View-функция | Назначение |
+|-----|--------------|--------------|------------|
+| `/` | `homepage:index` | `homepage.views.index` | главная страница |
+| `/venues/` | `venues:list` | `venues.views.venues` | список площадок |
+| `/venues/<int:venue_id>/` | `venues:detail` | `venues.views.venue_detail` | площадка и занятость сегодня |
+| `/events/` | `events:list` | `events.views.events` | мероприятия по датам |
+| `/events/<int:event_id>/` | `events:detail` | `events.views.event_detail` | свободные места, статус регистрации |
+| `/registrations/` | `registrations:list` | `registrations.views.registrations` | список регистраций |
+| `/registrations/<int:registration_id>/` | `registrations:detail` | `registrations.views.registration_detail` | регистрация |
 
 Маршрутизация двухуровневая: `eventmanager/urls.py` подключает `urls.py`
-приложений через `include()`. Если объект с указанным id не найден, страница
-возвращает код 404. Для адресов без маршрута задан `handler404`
-(`homepage.views.page_not_found`); собственную страницу видно при
-`DEBUG = False`. Общий HTML-каркас формирует функция `page()` из
-`homepage/views.py`: кодировка, заголовок, Bootstrap и навигация.
-View-функции вызывают `storage.load_all()`, функции поиска из `models/` и
-выводят атрибуты объектов `Venue`, `Event`, `Registration`.
+приложений через `include()`; у каждого приложения есть пространство имён
+(`app_name`). Для адресов без маршрута задан `handler404`.
+
+### Шаблоны и статические файлы (ПР6)
+
+- `templates/base.html` — базовый шаблон: блоки `title` и `content`,
+  Bootstrap, собственные CSS и JavaScript, логотип, навигация, подвал;
+- `templates/includes/navigation.html` — навигация со ссылками `{% url %}`;
+- `templates/404.html` — страница ошибки 404;
+- шаблоны приложений наследуют базовый через `{% extends %}`:
+  `homepage/index.html`, `venues/venue_list.html`, `venue_detail.html`,
+  `events/event_list.html`, `event_detail.html`,
+  `registrations/registration_list.html`, `registration_detail.html`;
+- включаемые фрагменты (`{% include %}`): `venues/includes/venue_card.html`,
+  `events/includes/event_card.html`,
+  `registrations/includes/registration_status.html` — один фрагмент статуса
+  используется и в списке, и на странице регистрации;
+- view-функции готовят контекст и вызывают `render()`, HTML в Python не
+  формируется; если объект не найден, в шаблон передаётся `None`, а ответ
+  получает код 404;
+- в шаблонах используются циклы `{% for %}…{% empty %}`, условия `{% if %}`,
+  фильтры `length`, `default`, `date`;
+- статика приложения `homepage`: `static/homepage/css/style.css`,
+  `js/main.js` (текущий год в подвале), `img/logo.png`.
+
+Страницы открыты без авторизации; e-mail участников в веб-интерфейсе не
+выводятся. Пользователи и разграничение доступа запланированы.
 
 ## Структура проекта
 
 - `manage.py`, `eventmanager/` — Django-проект (настройки, корневые маршруты);
 - `homepage/`, `venues/`, `events/`, `registrations/` — Django-приложения
-  (`views.py`, `urls.py`);
+  (`views.py`, `urls.py`, `templates/`);
+- `templates/` — базовый шаблон, навигация и страница 404;
 - `main.py` — консольная версия приложения (сохранена);
 - `models/` — классы и функции предметной области:
   `venues.py`, `events.py`, `registrations.py`;
@@ -208,7 +230,6 @@ flake8
 
 ## План развития
 
-- шаблоны Django вместо HTML в Python-строках;
 - база данных и модели Django;
 - пользователи и разграничение доступа;
 - REST API;

@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block title %}
+    {% if registration %}
+        Регистрация №{{ registration.id }} – Event Manager
+    {% else %}
+        Регистрация не найдена – Event Manager
+    {% endif %}
+{% endblock %}
+
+{% block content %}
+    {% if registration %}
+        <div class="card">
+            <div class="card-body">
+                <h1 class="card-title">
+                    Регистрация №{{ registration.id }}
+                </h1>
+
+                <p class="card-text">
+                    <strong>Участник:</strong> {{ registration.participant }}
+                </p>
+
+                <p class="card-text">
+                    <strong>Мероприятие:</strong>
+                    <a href="{% url 'events:detail' registration.event.id %}">
+                        {{ registration.event.title }}
+                    </a>
+                </p>
+
+                <p class="card-text">
+                    <strong>Дата регистрации:</strong>
+                    {{ registration.registered_at|date:"d.m.Y H:i" }}
+                </p>
+
+                <p class="card-text">
+                    <strong>Статус:</strong>
+                    {% include "registrations/includes/registration_status.html" %}
+                </p>
+            </div>
+        </div>
+    {% else %}
+        <h1 class="text-danger">
+            Регистрация не найдена
+        </h1>
+        <p>
+            Регистрация с указанным идентификатором отсутствует.
+        </p>
+    {% endif %}
+
+    <a
+        href="{% url 'registrations:list' %}"
+        class="btn btn-outline-secondary mt-3"
+    >
+        ← к списку регистраций
+    </a>
+{% endblock %}

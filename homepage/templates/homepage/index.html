@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block title %}
+    Главная – Event Manager
+{% endblock %}
+
+{% block content %}
+    <h1 class="display-4">Event Manager</h1>
+
+    <p class="lead">
+        Сервис управления мероприятиями организации.
+    </p>
+    <p>
+        Площадки с ограниченной вместимостью, мероприятия на них и
+        регистрация участников с листом ожидания.
+    </p>
+    <p>Основные разделы:</p>
+    <a href="{% url 'venues:list' %}" class="btn btn-primary me-2">
+        Площадки
+    </a>
+    <a href="{% url 'events:list' %}" class="btn btn-secondary me-2">
+        Мероприятия
+    </a>
+    <a href="{% url 'registrations:list' %}" class="btn btn-outline-secondary">
+        Регистрации
+    </a>
+{% endblock %}

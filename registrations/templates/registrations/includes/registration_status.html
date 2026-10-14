@@ -1,0 +1,13 @@
+{% if registration.status == "registered" %}
+    <span class="badge bg-success registration-status registration-status-registered">
+        участник
+    </span>
+{% elif registration.status == "waitlist" %}
+    <span class="badge bg-warning text-dark registration-status registration-status-waitlist">
+        лист ожидания
+    </span>
+{% else %}
+    <span class="badge bg-secondary registration-status registration-status-cancelled">
+        отменена
+    </span>
+{% endif %}

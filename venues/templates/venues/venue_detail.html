@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block title %}
+    {% if venue %}
+        {{ venue.name }} – Event Manager
+    {% else %}
+        Площадка не найдена – Event Manager
+    {% endif %}
+{% endblock %}
+
+{% block content %}
+    {% if venue %}
+        <div class="card">
+            <div class="card-body">
+                <h1 class="card-title">
+                    {{ venue.name }}
+                </h1>
+
+                <p class="card-text">
+                    <strong>ID:</strong> {{ venue.id }}
+                </p>
+
+                <p class="card-text">
+                    <strong>Адрес:</strong> {{ venue.address }}
+                </p>
+
+                <p class="card-text">
+                    <strong>Вместимость:</strong>
+                    {{ venue.capacity }} мест
+                </p>
+
+                <p class="card-text">
+                    <strong>Занятость сегодня:</strong>
+                    {% if is_free_today %}
+                        <span class="badge bg-success">свободна</span>
+                    {% else %}
+                        <span class="badge bg-danger">
+                            занята мероприятием
+                        </span>
+                    {% endif %}
+                </p>
+            </div>
+        </div>
+    {% else %}
+        <h1 class="text-danger">
+            Площадка не найдена
+        </h1>
+        <p>
+            Площадка с указанным идентификатором отсутствует.
+        </p>
+    {% endif %}
+
+    <a
+        href="{% url 'venues:list' %}"
+        class="btn btn-outline-secondary mt-3"
+    >
+        ← к списку площадок
+    </a>
+{% endblock %}
