@@ -3,13 +3,16 @@ import json
 from datetime import datetime
 from pathlib import Path
 
+from models import Event, Registration, Venue
+from models.events import find_event_by_id
+from models.venues import find_venue_by_id
+
 DATA_DIR = Path(__file__).parent / "data"
 VENUES_FILE = DATA_DIR / "venues.json"
 EVENTS_FILE = DATA_DIR / "events.json"
 REGISTRATIONS_FILE = DATA_DIR / "registrations.json"
 
-EVENT_DATETIME_FIELDS = ("starts_at", "ends_at")
-REGISTRATION_DATETIME_FIELDS = ("registered_at",)
+DATETIME_FORMAT = "minutes"
 
 
 def load_items(path: Path) -> list[dict]:
@@ -39,63 +42,94 @@ def save_items(path: Path, items: list[dict]) -> None:
         json.dump(items, file, ensure_ascii=False, indent=4)
 
 
-def _decode_dates(item: dict, fields: tuple[str, ...]) -> dict:
-    """Вернуть копию записи, где строки ISO в полях fields стали datetime."""
-    return {
-        key: datetime.fromisoformat(value) if key in fields else value
-        for key, value in item.items()
-    }
+def _format(value: datetime) -> str:
+    """Вернуть дату и время в формате ISO 8601 с точностью до минут."""
+    return value.isoformat(timespec=DATETIME_FORMAT)
 
 
-def _encode_dates(item: dict, fields: tuple[str, ...]) -> dict:
-    """Вернуть копию записи, где datetime в полях fields стали строками ISO."""
-    return {
-        key: value.isoformat(timespec="minutes") if key in fields else value
-        for key, value in item.items()
-    }
+def load_venues(path: Path = VENUES_FILE) -> list[Venue]:
+    """Загрузить площадки: записи JSON превращаются в объекты Venue."""
+    return [Venue.from_data(item) for item in load_items(path)]
 
 
-def load_venues(path: Path = VENUES_FILE) -> dict[int, dict]:
-    """Загрузить площадки в словарь {id: площадка}."""
-    return {venue["id"]: venue for venue in load_items(path)}
+def save_venues(venues: list[Venue], path: Path = VENUES_FILE) -> None:
+    """Сохранить площадки: объекты Venue превращаются в записи JSON."""
+    save_items(path, [
+        {"id": v.id, "name": v.name, "address": v.address,
+         "capacity": v.capacity}
+        for v in venues
+    ])
 
 
-def save_venues(venues: dict[int, dict], path: Path = VENUES_FILE) -> None:
-    """Сохранить площадки."""
-    save_items(path, list(venues.values()))
+def load_events(
+    venues: list[Venue],
+    path: Path = EVENTS_FILE
+) -> list[Event]:
+    """Загрузить мероприятия, восстановив связь с объектами Venue.
+
+    Raises:
+        ValueError: если мероприятие ссылается на несуществующую площадку.
+    """
+    events = []
+    for item in load_items(path):
+        venue = find_venue_by_id(venues, item["venue_id"])
+        if venue is None:
+            raise ValueError(
+                f"Мероприятие id={item['id']}: площадка "
+                f"id={item['venue_id']} не найдена"
+            )
+        events.append(Event(
+            item["id"], item["title"], venue,
+            datetime.fromisoformat(item["starts_at"]),
+            datetime.fromisoformat(item["ends_at"]),
+            item["capacity"], item["is_published"],
+        ))
+    return events
 
 
-def load_events(path: Path = EVENTS_FILE) -> dict[int, dict]:
-    """Загрузить мероприятия в словарь {id: мероприятие}."""
-    return {
-        item["id"]: _decode_dates(item, EVENT_DATETIME_FIELDS)
-        for item in load_items(path)
-    }
+def save_events(events: list[Event], path: Path = EVENTS_FILE) -> None:
+    """Сохранить мероприятия: вместо объекта Venue пишется venue_id."""
+    save_items(path, [
+        {"id": e.id, "title": e.title, "venue_id": e.venue.id,
+         "starts_at": _format(e.starts_at), "ends_at": _format(e.ends_at),
+         "capacity": e.capacity, "is_published": e.is_published}
+        for e in events
+    ])
 
 
-def save_events(events: dict[int, dict], path: Path = EVENTS_FILE) -> None:
-    """Сохранить мероприятия."""
-    save_items(
-        path,
-        [_encode_dates(e, EVENT_DATETIME_FIELDS) for e in events.values()],
-    )
+def load_registrations(
+    events: list[Event],
+    path: Path = REGISTRATIONS_FILE
+) -> list[Registration]:
+    """Загрузить регистрации, восстановив связь с объектами Event.
 
-
-def load_registrations(path: Path = REGISTRATIONS_FILE) -> list[dict]:
-    """Загрузить регистрации в список."""
-    return [
-        _decode_dates(item, REGISTRATION_DATETIME_FIELDS)
-        for item in load_items(path)
-    ]
+    Raises:
+        ValueError: если регистрация ссылается на несуществующее
+            мероприятие.
+    """
+    registrations = []
+    for item in load_items(path):
+        event = find_event_by_id(events, item["event_id"])
+        if event is None:
+            raise ValueError(
+                f"Регистрация id={item['id']}: мероприятие "
+                f"id={item['event_id']} не найдено"
+            )
+        registrations.append(Registration(
+            item["id"], event, item["participant"], item["email"],
+            datetime.fromisoformat(item["registered_at"]), item["status"],
+        ))
+    return registrations
 
 
 def save_registrations(
-    registrations: list[dict],
+    registrations: list[Registration],
     path: Path = REGISTRATIONS_FILE
 ) -> None:
-    """Сохранить регистрации."""
-    save_items(
-        path,
-        [_encode_dates(r, REGISTRATION_DATETIME_FIELDS)
-         for r in registrations],
-    )
+    """Сохранить регистрации: вместо объекта Event пишется event_id."""
+    save_items(path, [
+        {"id": r.id, "event_id": r.event.id, "participant": r.participant,
+         "email": r.email, "status": r.status,
+         "registered_at": _format(r.registered_at)}
+        for r in registrations
+    ])

@@ -3,42 +3,45 @@ from collections.abc import Callable
 from datetime import datetime
 
 import storage
-from events import (add_event, days_until_event, find_events, get_free_seats,
-                    get_upcoming_events)
-from registrations import (cancel_registration, count_registered,
-                           get_event_participants, get_registration_status,
-                           get_statistics, is_registration_open,
-                           register_participant)
+from models import Event, Registration, Venue
+from models.events import (add_event, find_event_by_id, find_events,
+                           get_free_seats, get_upcoming_events)
+from models.registrations import (cancel_registration, count_registered,
+                                  get_event_participants,
+                                  get_registration_status, get_statistics,
+                                  register_participant)
+from models.venues import (add_venue, filter_venues_by_capacity,
+                           find_venue_by_id, sort_venues)
 from utils import format_datetime, input_datetime, input_int, input_text
-from venues import add_venue, filter_venues_by_capacity, sort_venues
 
 ORGANIZATION_NAME = "РТУ МИРЭА"
 STATUS_TITLES = {"registered": "участник", "waitlist": "лист ожидания"}
 
 
-def print_venue_table(venues: list[dict]) -> None:
+def print_venue_table(venues: list[Venue]) -> None:
     """Вывести площадки таблицей."""
     if not venues:
         print("Площадки не найдены.")
         return
     print(f"{'id':>3}  {'Площадка':<22} {'Мест':>5}  Адрес")
     for venue in venues:
-        print(f"{venue['id']:>3}  {venue['name']:<22} "
-              f"{venue['capacity']:>5}  {venue['address']}")
+        print(f"{venue.id:>3}  {venue.name:<22} "
+              f"{venue.capacity:>5}  {venue.address}")
 
 
-def print_event_table(events: list[dict], data: dict) -> None:
+def print_event_table(
+    events: list[Event],
+    registrations: list[Registration]
+) -> None:
     """Вывести мероприятия таблицей с числом свободных мест."""
     if not events:
         print("Мероприятия не найдены.")
         return
     for event in events:
-        venue = data["venues"][event["venue_id"]]
-        registered = count_registered(data["registrations"], event["id"])
-        free = get_free_seats(event["capacity"], registered)
-        print(f"{event['id']:>3}  {format_datetime(event['starts_at'])}  "
-              f"{event['title']} — {venue['name']}, "
-              f"свободно {free} из {event['capacity']}")
+        registered = count_registered(registrations, event)
+        free = get_free_seats(event.capacity, registered)
+        print(f"{event.id:>3}  {event}, "
+              f"свободно {free} из {event.capacity}")
 
 
 def show_venues(data: dict) -> bool:
@@ -58,80 +61,93 @@ def search_venues(data: dict) -> bool:
 
 def add_venue_menu(data: dict) -> bool:
     """Добавить площадку организации."""
-    venue_id = add_venue(
+    venue = add_venue(
         data["venues"],
         input_text("Название площадки: "),
         input_text("Адрес: "),
         input_int("Вместимость: ", min_value=1),
     )
-    print(f"Площадка добавлена, id={venue_id}.")
+    print(f"Площадка добавлена, id={venue.id}.")
     return True
 
 
 def show_events(data: dict) -> bool:
     """Показать предстоящие мероприятия в порядке дат."""
     upcoming = list(get_upcoming_events(data["events"], datetime.now()))
-    print_event_table(upcoming, data)
+    print_event_table(upcoming, data["registrations"])
     return False
 
 
 def search_events(data: dict) -> bool:
     """Найти мероприятия по части названия."""
     query = input_text("Часть названия: ")
-    print_event_table(find_events(data["events"], query), data)
+    print_event_table(find_events(data["events"], query),
+                      data["registrations"])
     return False
 
 
 def add_event_menu(data: dict) -> bool:
     """Создать мероприятие с проверкой вместимости и занятости площадки."""
     print_venue_table(sort_venues(data["venues"]))
-    event_id = add_event(
+    venue = find_venue_by_id(data["venues"], input_int("id площадки: "))
+    if venue is None:
+        print("Площадка не найдена.")
+        return False
+    event = add_event(
         data["events"],
-        data["venues"],
+        venue,
         input_text("Название мероприятия: "),
-        input_int("id площадки: "),
         input_datetime("Начало (ДД.ММ.ГГГГ ЧЧ:ММ): "),
         input_datetime("Окончание (ДД.ММ.ГГГГ ЧЧ:ММ): "),
         input_int("Число мест: ", min_value=1),
     )
-    print(f"Мероприятие создано, id={event_id}.")
+    print(f"Мероприятие создано, id={event.id}.")
     return True
+
+
+def ask_event(data: dict) -> Event | None:
+    """Запросить id и найти мероприятие; при неудаче сообщить об этом."""
+    event = find_event_by_id(data["events"], input_int("id мероприятия: "))
+    if event is None:
+        print("Мероприятие не найдено.")
+    return event
 
 
 def check_registration(data: dict) -> bool:
     """Проверить, открыта ли регистрация на мероприятие (сценарий ПР1)."""
-    event = data["events"].get(input_int("id мероприятия: "))
+    event = ask_event(data)
     if event is None:
-        print("Мероприятие не найдено.")
         return False
     now = datetime.now()
-    registered = count_registered(data["registrations"], event["id"])
-    free_seats = get_free_seats(event["capacity"], registered)
-    days_left = days_until_event(event["starts_at"].date(), now.date())
-    print(f"{event['title']}: {format_datetime(event['starts_at'])}, "
+    registered = count_registered(data["registrations"], event)
+    free_seats = get_free_seats(event.capacity, registered)
+    days_left = event.days_until(now.date())
+    print(f"{event.title}: {format_datetime(event.starts_at)}, "
           f"через {days_left} дн.")
-    print(f"Зарегистрировано {registered} из {event['capacity']}, "
+    print(f"Зарегистрировано {registered} из {event.capacity}, "
           f"свободно {free_seats}")
-    if event["is_published"] and not is_registration_open(event, now):
+    if event.is_published and not event.is_registration_open(now):
         print("Мероприятие уже началось, регистрация закрыта")
     else:
-        print(get_registration_status(event["is_published"], free_seats,
+        print(get_registration_status(event.is_published, free_seats,
                                       days_left))
     return False
 
 
 def register_menu(data: dict) -> bool:
     """Зарегистрировать участника на мероприятие."""
+    event = ask_event(data)
+    if event is None:
+        return False
     registration = register_participant(
         data["registrations"],
-        data["events"],
-        input_int("id мероприятия: "),
+        event,
         input_text("Имя участника: "),
         input_text("E-mail: "),
         datetime.now(),
     )
-    status = STATUS_TITLES[registration["status"]]
-    print(f"Регистрация id={registration['id']} создана, статус: {status}.")
+    status = STATUS_TITLES[registration.status]
+    print(f"Регистрация id={registration.id} создана, статус: {status}.")
     return True
 
 
@@ -143,20 +159,21 @@ def cancel_menu(data: dict) -> bool:
     print("Регистрация отменена.")
     if promoted:
         print(f"Из листа ожидания переведён участник "
-              f"{promoted['participant']}.")
+              f"{promoted.participant}.")
     return True
 
 
 def show_participants(data: dict) -> bool:
     """Показать участников и лист ожидания мероприятия."""
-    participants = get_event_participants(
-        data["registrations"], input_int("id мероприятия: ")
-    )
+    event = ask_event(data)
+    if event is None:
+        return False
+    participants = get_event_participants(data["registrations"], event)
     if not participants:
         print("Регистраций нет.")
     for r in participants:
-        print(f"{r['id']:>3}  {r['participant']:<20} {r['email']:<24} "
-              f"{STATUS_TITLES[r['status']]}")
+        print(f"{r.id:>3}  {r.participant:<20} {r.email:<24} "
+              f"{STATUS_TITLES[r.status]}")
     return False
 
 
@@ -167,9 +184,8 @@ def show_statistics(data: dict) -> bool:
     print(f"Участников: {stats['registered']}, "
           f"в листе ожидания: {stats['waitlist']}")
     print(f"Средняя заполненность: {stats['average_fill_percent']}%")
-    if stats["most_popular_event_id"] is not None:
-        popular = data["events"][stats["most_popular_event_id"]]
-        print(f"Самое востребованное: {popular['title']}")
+    if stats["most_popular_event"] is not None:
+        print(f"Самое востребованное: {stats['most_popular_event'].title}")
     return False
 
 
@@ -204,10 +220,12 @@ def save_all(data: dict) -> None:
 def main() -> None:
     """Точка запуска: загрузка данных и цикл меню."""
     try:
+        venues = storage.load_venues()
+        events = storage.load_events(venues)
         data = {
-            "venues": storage.load_venues(),
-            "events": storage.load_events(),
-            "registrations": storage.load_registrations(),
+            "venues": venues,
+            "events": events,
+            "registrations": storage.load_registrations(events),
         }
     except (ValueError, KeyError) as error:
         print(f"Не удалось загрузить данные: {error}")
