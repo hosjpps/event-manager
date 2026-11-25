@@ -7,8 +7,49 @@
 {% block content %}
     <h1>Мероприятия</h1>
 
+    <form method="get" class="row g-2 align-items-end mb-3">
+        <div class="col-md-3">
+            <label for="date" class="form-label">Дата</label>
+            <input type="date" id="date" name="date" class="form-control"
+                   value="{{ event_date }}">
+        </div>
+        <div class="col-md-3">
+            <label for="venue" class="form-label">Площадка</label>
+            <select id="venue" name="venue" class="form-select">
+                <option value="">Все площадки</option>
+                {% for venue in venues %}
+                    <option value="{{ venue.pk }}"
+                        {% if selected_venue == venue.pk|stringformat:"s" %}selected{% endif %}>
+                        {{ venue.name }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label for="q" class="form-label">Название</label>
+            <input type="text" id="q" name="q" class="form-control"
+                   value="{{ query }}" placeholder="поиск">
+        </div>
+        <div class="col-md-2">
+            <label for="sort" class="form-label">Сортировка</label>
+            <select id="sort" name="sort" class="form-select">
+                <option value="date" {% if sort == "date" %}selected{% endif %}>по дате</option>
+                <option value="title" {% if sort == "title" %}selected{% endif %}>по названию</option>
+                <option value="venue" {% if sort == "venue" %}selected{% endif %}>по площадке</option>
+            </select>
+        </div>
+        <div class="col-md-2">
+            <button type="submit" class="btn btn-primary">Найти</button>
+            <a href="{% url 'events:list' %}" class="btn btn-outline-secondary">Сброс</a>
+        </div>
+    </form>
+
+    {% if error %}
+        <p class="text-danger">{{ error }}</p>
+    {% endif %}
+
     <p>
-        Всего мероприятий: {{ events|length }}
+        Найдено мероприятий: {{ total }}
     </p>
 
     {% for event in events %}
@@ -16,4 +57,26 @@
     {% empty %}
         <p>Мероприятия не найдены.</p>
     {% endfor %}
+
+    {% if page_obj.has_other_pages %}
+        <nav aria-label="Страницы">
+            <ul class="pagination">
+                {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="{% querystring page=page_obj.previous_page_number %}">← назад</a>
+                    </li>
+                {% endif %}
+                <li class="page-item disabled">
+                    <span class="page-link">
+                        страница {{ page_obj.number }} из {{ page_obj.paginator.num_pages }}
+                    </span>
+                </li>
+                {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="{% querystring page=page_obj.next_page_number %}">вперёд →</a>
+                    </li>
+                {% endif %}
+            </ul>
+        </nav>
+    {% endif %}
 {% endblock %}

@@ -1,8 +1,11 @@
-import os
+import pytest
+from django.core.management import call_command
 
-import django
-from django.test.utils import setup_test_environment
+from db.import_sqlite_to_orm import main as import_from_pr7_database
 
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "eventmanager.settings")
-django.setup()
-setup_test_environment()
+
+@pytest.fixture
+def sample_data(db):
+    """Тестовая база: данные ПР7 (перенос скриптом) и демо-фикстура."""
+    import_from_pr7_database()
+    call_command("loaddata", "demo", verbosity=0)

@@ -11,6 +11,11 @@
         Участников: {{ totals.registered }},
         в листе ожидания: {{ totals.waitlist }}
     </p>
+    <p>
+        Мероприятий: {{ capacity.events_count }},
+        средняя вместимость: {{ capacity.average_capacity|floatformat:1 }},
+        наибольшая: {{ capacity.max_capacity }}
+    </p>
 
     <h2>Заполненность мероприятий</h2>
     <ul class="list-group mb-4">

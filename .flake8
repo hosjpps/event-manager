@@ -1,4 +1,4 @@
 [flake8]
-exclude = .venv,__pycache__,.pytest_cache
+exclude = .venv,__pycache__,.pytest_cache,*/migrations/*
 per-file-ignores =
     eventmanager/settings.py: E501

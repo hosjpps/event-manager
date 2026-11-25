@@ -31,7 +31,7 @@
 
                 <p class="card-text">
                     <strong>Занятость сегодня:</strong>
-                    {% if venue.is_free_today %}
+                    {% if is_free_today %}
                         <span class="badge bg-success">свободна</span>
                     {% else %}
                         <span class="badge bg-danger">
@@ -39,6 +39,18 @@
                         </span>
                     {% endif %}
                 </p>
+
+                <h2 class="h5 mt-3">Мероприятия на площадке</h2>
+                <ul class="list-group">
+                    {% for event in events %}
+                        <li class="list-group-item">
+                            <a href="{% url 'events:detail' event.id %}">{{ event.title }}</a>
+                            – {{ event.starts_at|date:"d.m.Y H:i" }}
+                        </li>
+                    {% empty %}
+                        <li class="list-group-item">Мероприятий нет.</li>
+                    {% endfor %}
+                </ul>
             </div>
         </div>
     {% else %}

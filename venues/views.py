@@ -1,21 +1,15 @@
-from contextlib import closing
 from datetime import date, datetime, time, timedelta
 
-from django.shortcuts import render
+from django.shortcuts import get_object_or_404, render
+from django.utils import timezone
 
-from db.database import get_connection
+from events.models import Event
+
+from .models import Venue
 
 
 def venues(request):
-    with closing(get_connection()) as conn:
-        venues_list = conn.execute(
-            """
-            SELECT id, name, address, capacity
-            FROM venues
-            ORDER BY name;
-            """
-        ).fetchall()
-
+    venues_list = Venue.objects.order_by("name")
     return render(
         request,
         "venues/venue_list.html",
@@ -24,63 +18,43 @@ def venues(request):
 
 
 def venue_detail(request, venue_id):
-    day_start = datetime.combine(date.today(), time.min)
-    day_end = day_start + timedelta(days=1)
+    venue = get_object_or_404(Venue, pk=venue_id)
 
-    with closing(get_connection()) as conn:
-        venue = conn.execute(
-            """
-            SELECT
-                venues.id,
-                venues.name,
-                venues.address,
-                venues.capacity,
-                NOT EXISTS (
-                    SELECT 1
-                    FROM events
-                    WHERE events.venue_id = venues.id
-                    AND events.starts_at < ?
-                    AND events.ends_at > ?
-                ) AS is_free_today
-            FROM venues
-            WHERE venues.id = ?;
-            """,
-            [day_end.isoformat(), day_start.isoformat(), venue_id],
-        ).fetchone()
-
-    return render(
-        request,
-        "venues/venue_detail.html",
-        {"venue": venue},
-        status=404 if venue is None else 200,
+    day_start = timezone.make_aware(
+        datetime.combine(timezone.localdate(), time.min)
     )
+    day_end = day_start + timedelta(days=1)
+    # Обратная связь related_name="events": мероприятия этой площадки.
+    is_free_today = not venue.events.filter(
+        starts_at__lt=day_end,
+        ends_at__gt=day_start,
+    ).exists()
+
+    context = {
+        "venue": venue,
+        "is_free_today": is_free_today,
+        "events": venue.events.order_by("starts_at"),
+    }
+    return render(request, "venues/venue_detail.html", context)
 
 
 def available_venues(request):
-    event_date = request.GET.get("date")
+    event_date = request.GET.get("date", "").strip()
     error = None
     venues_list = []
 
     if event_date:
         try:
-            date.fromisoformat(event_date)
+            selected_date = date.fromisoformat(event_date)
         except ValueError:
             error = "Укажите дату в формате ГГГГ-ММ-ДД."
         else:
-            with closing(get_connection()) as conn:
-                venues_list = conn.execute(
-                    """
-                    SELECT id, name, address, capacity
-                    FROM venues
-                    WHERE id NOT IN (
-                        SELECT venue_id
-                        FROM events
-                        WHERE substr(starts_at, 1, 10) = ?
-                    )
-                    ORDER BY name;
-                    """,
-                    [event_date],
-                ).fetchall()
+            busy_venue_ids = Event.objects.filter(
+                starts_at__date=selected_date,
+            ).values_list("venue_id", flat=True)
+            venues_list = Venue.objects.exclude(
+                pk__in=busy_venue_ids,
+            ).order_by("name")
 
     return render(
         request,

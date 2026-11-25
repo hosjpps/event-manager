@@ -1,35 +1,19 @@
-from contextlib import closing
+from django.db.models import Avg, Count, F, Max, Q
+from django.shortcuts import get_object_or_404, render
 
-from django.shortcuts import render
+from events.models import Event
+from venues.models import Venue
 
-from db.database import get_connection
-
-REGISTRATION_SELECT = """
-    SELECT
-        registrations.id,
-        registrations.participant,
-        registrations.status,
-        strftime(
-            '%d.%m.%Y %H:%M', registrations.registered_at
-        ) AS registered_at_text,
-        registrations.event_id,
-        events.title AS event_title,
-        venues.name AS venue_name
-    FROM registrations
-    JOIN events ON registrations.event_id = events.id
-    JOIN venues ON events.venue_id = venues.id
-"""
+from .models import Registration
 
 
 def registrations(request):
-    with closing(get_connection()) as conn:
-        registrations_list = conn.execute(
-            REGISTRATION_SELECT + """
-            WHERE registrations.status != 'cancelled'
-            ORDER BY registrations.id;
-            """
-        ).fetchall()
-
+    registrations_list = (
+        Registration.objects
+        .exclude(status="cancelled")
+        .select_related("event__venue")
+        .order_by("pk")
+    )
     return render(
         request,
         "registrations/registration_list.html",
@@ -38,75 +22,66 @@ def registrations(request):
 
 
 def registration_detail(request, registration_id):
-    with closing(get_connection()) as conn:
-        registration = conn.execute(
-            REGISTRATION_SELECT + "WHERE registrations.id = ?;",
-            [registration_id],
-        ).fetchone()
-
+    registration = get_object_or_404(
+        Registration.objects.select_related("event__venue"),
+        pk=registration_id,
+    )
     return render(
         request,
         "registrations/registration_detail.html",
         {"registration": registration},
-        status=404 if registration is None else 200,
     )
 
 
 def statistics(request):
-    with closing(get_connection()) as conn:
-        totals = conn.execute(
-            """
-            SELECT
-                COUNT(CASE WHEN status = 'registered' THEN 1 END)
-                    AS registered,
-                COUNT(CASE WHEN status = 'waitlist' THEN 1 END)
-                    AS waitlist
-            FROM registrations;
-            """
-        ).fetchone()
-        by_event = conn.execute(
-            """
-            SELECT
-                events.title AS event_title,
-                events.capacity,
-                COUNT(registrations.id) AS registered_count
-            FROM events
-            LEFT JOIN registrations
-                ON registrations.event_id = events.id
-                AND registrations.status = 'registered'
-            GROUP BY events.id, events.title, events.capacity
-            ORDER BY registered_count DESC;
-            """
-        ).fetchall()
-        by_venue = conn.execute(
-            """
-            SELECT
-                venues.name AS venue_name,
-                COUNT(events.id) AS events_count
-            FROM venues
-            LEFT JOIN events ON events.venue_id = venues.id
-            GROUP BY venues.id, venues.name
-            ORDER BY events_count DESC, venues.name;
-            """
-        ).fetchall()
-        with_waitlist = conn.execute(
-            """
-            SELECT
-                events.title AS event_title,
-                COUNT(registrations.id) AS waitlist_count
-            FROM events
-            JOIN registrations ON registrations.event_id = events.id
-            WHERE registrations.status = 'waitlist'
-            GROUP BY events.id, events.title
-            HAVING COUNT(registrations.id) >= 1;
-            """
-        ).fetchall()
-
+    totals = Registration.objects.aggregate(
+        registered=Count("pk", filter=Q(status="registered")),
+        waitlist=Count("pk", filter=Q(status="waitlist")),
+    )
+    capacity = Event.objects.aggregate(
+        events_count=Count("pk"),
+        average_capacity=Avg("capacity"),
+        max_capacity=Max("capacity"),
+    )
+    by_event = (
+        Event.objects
+        .annotate(
+            event_title=F("title"),
+            registered_count=Count(
+                "registrations",
+                filter=Q(registrations__status="registered"),
+            ),
+        )
+        .values("event_title", "capacity", "registered_count")
+        .order_by("-registered_count", "starts_at")
+    )
+    # Начинаем с Venue, чтобы площадки без мероприятий тоже попали в
+    # результат с нулём (аналог LEFT JOIN ... GROUP BY).
+    by_venue = (
+        Venue.objects
+        .annotate(venue_name=F("name"), events_count=Count("events"))
+        .values("venue_name", "events_count")
+        .order_by("-events_count", "venue_name")
+    )
+    # Фильтр по аннотации — это HAVING в SQL.
+    with_waitlist = (
+        Event.objects
+        .annotate(
+            event_title=F("title"),
+            waitlist_count=Count(
+                "registrations",
+                filter=Q(registrations__status="waitlist"),
+            ),
+        )
+        .filter(waitlist_count__gte=1)
+        .values("event_title", "waitlist_count")
+    )
     return render(
         request,
         "registrations/statistics.html",
         {
             "totals": totals,
+            "capacity": capacity,
             "by_event": by_event,
             "by_venue": by_venue,
             "with_waitlist": with_waitlist,

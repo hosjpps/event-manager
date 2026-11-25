@@ -1,0 +1,163 @@
+[
+  {
+    "model": "events.event",
+    "pk": 4,
+    "fields": {
+      "title": "Мастер-класс по Docker",
+      "venue": 1,
+      "starts_at": "2026-12-03T17:00:00+03:00",
+      "ends_at": "2026-12-03T19:00:00+03:00",
+      "capacity": 60,
+      "is_published": true
+    }
+  },
+  {
+    "model": "events.event",
+    "pk": 5,
+    "fields": {
+      "title": "Встреча клуба разработчиков",
+      "venue": 3,
+      "starts_at": "2026-12-05T18:00:00+03:00",
+      "ends_at": "2026-12-05T20:00:00+03:00",
+      "capacity": 30,
+      "is_published": true
+    }
+  },
+  {
+    "model": "events.event",
+    "pk": 6,
+    "fields": {
+      "title": "Лекция «Основы SQL»",
+      "venue": 2,
+      "starts_at": "2026-12-08T12:00:00+03:00",
+      "ends_at": "2026-12-08T13:30:00+03:00",
+      "capacity": 25,
+      "is_published": true
+    }
+  },
+  {
+    "model": "events.event",
+    "pk": 7,
+    "fields": {
+      "title": "Карьерный день",
+      "venue": 1,
+      "starts_at": "2026-12-10T11:00:00+03:00",
+      "ends_at": "2026-12-10T16:00:00+03:00",
+      "capacity": 110,
+      "is_published": true
+    }
+  },
+  {
+    "model": "events.event",
+    "pk": 8,
+    "fields": {
+      "title": "Семинар по Django ORM",
+      "venue": 2,
+      "starts_at": "2026-12-12T14:00:00+03:00",
+      "ends_at": "2026-12-12T16:00:00+03:00",
+      "capacity": 2,
+      "is_published": true
+    }
+  },
+  {
+    "model": "events.event",
+    "pk": 9,
+    "fields": {
+      "title": "Новогодний квиз",
+      "venue": 3,
+      "starts_at": "2026-12-24T18:00:00+03:00",
+      "ends_at": "2026-12-24T21:00:00+03:00",
+      "capacity": 40,
+      "is_published": true
+    }
+  },
+  {
+    "model": "events.event",
+    "pk": 10,
+    "fields": {
+      "title": "Защита курсовых проектов",
+      "venue": 1,
+      "starts_at": "2026-12-26T10:00:00+03:00",
+      "ends_at": "2026-12-26T15:00:00+03:00",
+      "capacity": 80,
+      "is_published": true
+    }
+  },
+  {
+    "model": "registrations.registration",
+    "pk": 6,
+    "fields": {
+      "event": 4,
+      "participant": "Павел Соколов",
+      "email": "sokolov@edu.mirea.ru",
+      "status": "registered",
+      "registered_at": "2026-11-20T10:00:00+03:00"
+    }
+  },
+  {
+    "model": "registrations.registration",
+    "pk": 7,
+    "fields": {
+      "event": 4,
+      "participant": "Ирина Белова",
+      "email": "belova@edu.mirea.ru",
+      "status": "registered",
+      "registered_at": "2026-11-20T11:30:00+03:00"
+    }
+  },
+  {
+    "model": "registrations.registration",
+    "pk": 8,
+    "fields": {
+      "event": 8,
+      "participant": "Сергей Новиков",
+      "email": "novikov@edu.mirea.ru",
+      "status": "registered",
+      "registered_at": "2026-11-21T09:00:00+03:00"
+    }
+  },
+  {
+    "model": "registrations.registration",
+    "pk": 9,
+    "fields": {
+      "event": 8,
+      "participant": "Екатерина Зайцева",
+      "email": "zaytseva@edu.mirea.ru",
+      "status": "registered",
+      "registered_at": "2026-11-21T09:10:00+03:00"
+    }
+  },
+  {
+    "model": "registrations.registration",
+    "pk": 10,
+    "fields": {
+      "event": 8,
+      "participant": "Алексей Морозов",
+      "email": "morozov@edu.mirea.ru",
+      "status": "waitlist",
+      "registered_at": "2026-11-21T09:20:00+03:00"
+    }
+  },
+  {
+    "model": "registrations.registration",
+    "pk": 11,
+    "fields": {
+      "event": 7,
+      "participant": "Ольга Волкова",
+      "email": "volkova@edu.mirea.ru",
+      "status": "cancelled",
+      "registered_at": "2026-11-22T15:00:00+03:00"
+    }
+  },
+  {
+    "model": "registrations.registration",
+    "pk": 12,
+    "fields": {
+      "event": 9,
+      "participant": "Дмитрий Лебедев",
+      "email": "lebedev@edu.mirea.ru",
+      "status": "registered",
+      "registered_at": "2026-11-23T12:00:00+03:00"
+    }
+  }
+]

@@ -2,7 +2,7 @@
 
 Приложение для учёта площадок организации, её мероприятий и регистрации
 участников. Консольная версия (ПР1–ПР3) дополнена веб-интерфейсом на Django
-(ПР5), шаблонами (ПР6) и базой данных SQLite (ПР7).
+(ПР5), шаблонами (ПР6), базой данных SQLite (ПР7) и моделями Django ORM (ПР9).
 
 ## Назначение
 
@@ -90,8 +90,8 @@ Registration ──event──▶ Event ──venue──▶ Venue
 ## Веб-интерфейс на Django (ПР5, ПР6)
 
 Используются Django 5.2, Django Template Language, HTML5, CSS, JavaScript и
-Bootstrap 5.3 (через CDN). Веб-страницы получают данные из базы SQLite SQL-запросами
-(см. ниже); Django ORM пока не используется, веб-формы ещё не реализованы.
+Bootstrap 5.3 (через CDN). С ПР9 веб-страницы получают данные через Django ORM
+(см. раздел ПР9); веб-формы ещё не реализованы.
 
 Django-проект `eventmanager` включает четыре приложения: `homepage` (главная,
 статические файлы), `venues` (площадки), `events` (мероприятия),
@@ -139,6 +139,54 @@ Django-проект `eventmanager` включает четыре приложе�
 Страницы открыты без авторизации; e-mail участников в веб-интерфейсе не
 выводятся. Пользователи и разграничение доступа запланированы.
 
+## Модели Django и ORM (ПР9)
+
+Слой данных веб-приложения переведён с ручных SQL-запросов (`sqlite3`) на
+Django ORM. Приложение работает с базой Django `db.sqlite3` (параметр
+`DATABASES`); база ПР7 `data/event_manager.sqlite` осталась источником для
+переноса и не изменяется.
+
+| Модель | Приложение | Поля | Связи |
+|--------|-----------|------|-------|
+| `Venue` | `venues` | `name` (уникально), `address`, `capacity` | — |
+| `Event` | `events` | `title`, `venue`, `starts_at`, `ends_at`, `capacity`, `is_published` | `venue` → `Venue`, `on_delete=PROTECT`, `related_name="events"` |
+| `Registration` | `registrations` | `event`, `participant`, `email`, `status`, `registered_at` | `event` → `Event`, `on_delete=CASCADE`, `related_name="registrations"` |
+
+- Площадку с мероприятиями удалить нельзя (`PROTECT`): иначе пропала бы
+  история; при удалении мероприятия удаляются его регистрации (`CASCADE`).
+- `venue.events.all()` и `event.registrations.all()` — обратные связи.
+
+Стратегия перехода — «таблицы создаёт Django, данные переносятся»:
+`db/inspect_source_db.py` осматривает базу ПР7 (только чтение),
+`db/import_sqlite_to_orm.py` переносит записи с сохранением id в одной
+транзакции (`update_or_create`, повторный запуск безопасен), фикстура
+`events/fixtures/demo.json` добавляет демо-мероприятия для проверки пагинации.
+
+Подготовка базы:
+
+```bash
+python manage.py migrate
+python db/import_sqlite_to_orm.py
+python manage.py loaddata demo
+```
+
+ORM на страницах:
+
+- `/venues/` — `Venue.objects.order_by("name")`; `/venues/<id>/` —
+  `get_object_or_404()`, мероприятия площадки через `venue.events`;
+- `/venues/available/?date=…` — `exclude(pk__in=…values_list("venue_id"))`;
+- `/events/` — `select_related("venue")`, `annotate(Count(..., filter=Q(...)))`,
+  фильтры по дате, площадке и названию из GET-параметров, сортировка
+  (`?sort=date|title|venue`), `Paginator` по 5 записей; фильтры и сортировка
+  сохраняются при переходе по страницам (`{% querystring %}`);
+- `/registrations/` и карточки — `select_related("event__venue")`;
+- `/registrations/statistics/` — `aggregate()`, `annotate()` с `Count`, `Avg`,
+  `Max`, фильтр по аннотации (аналог `HAVING`).
+
+Ограничение SQLite: `LIKE` без учёта регистра работает только для латиницы,
+поэтому поиск по названию проверяет варианты регистра запроса
+(`title_matches()` в `events/views.py`).
+
 ## База данных SQLite и SQL (ПР7)
 
 Файл базы — `data/event_manager.sqlite`. Работа ведётся через стандартный
@@ -172,12 +220,13 @@ python -m db.import_json
 sqlite3 data/event_manager.sqlite    # проверка запросов в SQLite CLI
 ```
 
-Страницы, использующие SQL: `/venues/` и `/venues/<id>/`, `/events/` и
+В ПР7 страницы использовали SQL: `/venues/` и `/venues/<id>/`, `/events/` и
 `/events/<id>/`, `/registrations/` (активные регистрации, JOIN трёх таблиц),
 `/registrations/<id>/`, `/venues/available/?date=ГГГГ-ММ-ДД` (поиск свободных
 площадок на дату) и `/registrations/statistics/` (статистика: участники,
 заполненность мероприятий, мероприятия по площадкам, листы ожидания).
-JSON-файлы остаются источником данных консольной версии и импорта.
+В ПР9 они переведены на ORM, файлы `sql/` и `db/` сохранены как
+реализация ПР7. JSON-файлы остаются источником данных консольной версии.
 
 ## Структура проекта
 
@@ -192,7 +241,8 @@ JSON-файлы остаются источником данных консол�
   идентификаторы `venue_id` и `event_id`, при загрузке восстанавливаются
   ссылки на объекты);
 - `utils.py` — идентификаторы, разбор дат, безопасный ввод;
-- `db/`, `sql/` — подключение к SQLite, импорт из JSON, схема и запросы;
+- `db/`, `sql/` — SQL-слой ПР7 и скрипты переноса в Django ORM;
+- `*/models.py`, `*/migrations/` — модели Django и миграции (ПР9);
 - `data/` — JSON-файлы данных и база `event_manager.sqlite`;
 - `tests/` — автоматизированные тесты pytest, включая проверку страниц.
 
@@ -232,7 +282,7 @@ ISO 8601.
 
 - Python 3.10+;
 - Django 5.2;
-- pytest;
+- pytest и pytest-django;
 - flake8.
 
 Установка зависимостей:
@@ -245,7 +295,7 @@ pip install -r requirements.txt
 
 ## Запуск программы
 
-Веб-версия (Django):
+Веб-версия (Django), после подготовки базы (см. раздел ПР9):
 
 ```bash
 python manage.py runserver
@@ -271,7 +321,8 @@ flake8
 
 ## План развития
 
-- модели Django и ORM вместо прямых SQL-запросов;
+- административная панель Django;
+- формы создания и редактирования;
 - пользователи и разграничение доступа;
 - REST API;
 - контейнеризация в Docker и CI/CD.

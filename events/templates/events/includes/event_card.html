@@ -5,11 +5,17 @@
         </h2>
 
         <p class="card-text">
-            {{ event.starts_at_text }},
-            <a href="{% url 'venues:detail' event.venue_id %}">
-                {{ event.venue_name }}
+            {{ event.starts_at|date:"d.m.Y H:i" }},
+            <a href="{% url 'venues:detail' event.venue.id %}">
+                {{ event.venue.name }}
             </a>
         </p>
+
+        {% if event.registered is not None %}
+            <p class="card-text">
+                Зарегистрировано {{ event.registered }} из {{ event.capacity }}
+            </p>
+        {% endif %}
 
         <a
             href="{% url 'events:detail' event.id %}"
