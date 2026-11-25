@@ -1,4 +1,5 @@
 from django.contrib import messages
+from django.contrib.auth.decorators import login_required, permission_required
 from django.core.paginator import Paginator
 from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404, redirect, render
@@ -98,6 +99,8 @@ def event_detail(request, event_id):
     return render(request, "events/event_detail.html", context)
 
 
+@login_required
+@permission_required("events.add_event", raise_exception=True)
 def event_create(request):
     form = EventForm(request.POST or None)
     if request.method == "POST" and form.is_valid():
@@ -111,6 +114,8 @@ def event_create(request):
     )
 
 
+@login_required
+@permission_required("events.change_event", raise_exception=True)
 def event_update(request, event_id):
     event = get_object_or_404(Event, pk=event_id)
     form = EventForm(request.POST or None, instance=event)
@@ -126,6 +131,8 @@ def event_update(request, event_id):
 
 
 @require_POST
+@login_required
+@permission_required("events.change_event", raise_exception=True)
 def event_cancel(request, event_id):
     event = get_object_or_404(Event, pk=event_id)
     event.status = Event.Status.CANCELLED

@@ -12,6 +12,15 @@ from venues.models import Venue
 pytestmark = pytest.mark.usefixtures("sample_data")
 
 
+@pytest.fixture
+def client(client, django_user_model):
+    """Формы изменяют данные, поэтому тесты работают от администратора."""
+    admin = django_user_model.objects.create_superuser(
+        "admin", "admin@test.ru", "pass12345")
+    client.force_login(admin)
+    return client
+
+
 def slot(days=40, hour=10, length=2):
     """Время в будущем в формате поля datetime-local."""
     start = timezone.localtime() + timedelta(days=days)
@@ -153,3 +162,36 @@ def test_upload_rejects_not_an_image(client, settings, tmp_path):
     response = client.post("/venues/kovorking-3/photo/", {"photo": fake})
     assert response.status_code == 200
     assert "photo" in response.context["form"].errors
+
+
+@pytest.mark.parametrize("url", [
+    "/events/create/", "/events/4/edit/", "/venues/kovorking-3/photo/",
+])
+def test_anonymous_user_is_sent_to_login(url, django_user_model):
+    from django.test import Client
+    response = Client().get(url)
+    assert response.status_code == 302
+    assert "/admin/login/" in response["Location"]
+
+
+def test_anonymous_user_cannot_cancel_event():
+    from django.test import Client
+    Client().post("/events/4/cancel/")
+    assert Event.objects.get(pk=4).status == Event.Status.ACTIVE
+
+
+def test_user_without_permission_gets_403(django_user_model):
+    from django.test import Client
+    user = django_user_model.objects.create_user("guest", password="x12345")
+    guest = Client()
+    guest.force_login(user)
+    assert guest.get("/events/create/").status_code == 403
+    assert guest.post("/events/4/cancel/").status_code == 403
+
+
+def test_buttons_hidden_from_anonymous():
+    from django.test import Client
+    html = Client().get("/events/4/").content.decode()
+    assert "Редактировать" not in html
+    assert "Создать мероприятие" not in Client().get(
+        "/events/").content.decode()

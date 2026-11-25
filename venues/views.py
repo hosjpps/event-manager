@@ -1,6 +1,7 @@
 from datetime import date, datetime, time, timedelta
 
 from django.contrib import messages
+from django.contrib.auth.decorators import login_required, permission_required
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
@@ -72,6 +73,8 @@ def available_venues(request):
     )
 
 
+@login_required
+@permission_required("venues.change_venue", raise_exception=True)
 def venue_photo(request, slug):
     venue = get_object_or_404(Venue, slug=slug)
     if request.method == "POST":

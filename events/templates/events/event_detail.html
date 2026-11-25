@@ -55,7 +55,7 @@
                     {% endif %}
                 </p>
 
-                {% if event.status == "active" %}
+                {% if event.status == "active" and perms.events.change_event %}
                     <div class="d-flex gap-2 mt-3">
                         <a href="{% url 'events:edit' event.id %}" class="btn btn-primary">
                             Редактировать

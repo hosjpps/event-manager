@@ -133,6 +133,9 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 
+# Формы изменения данных доступны после входа (пока через вход админки).
+LOGIN_URL = 'admin:login'
+
 # Загруженные пользователями файлы (фото площадок).
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'

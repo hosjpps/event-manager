@@ -22,9 +22,11 @@
                 {% else %}
                     <p class="text-muted">Фото не загружено.</p>
                 {% endif %}
-                <a href="{% url 'venues:photo' venue.slug %}" class="btn btn-sm btn-outline-primary mb-3">
-                    {% if venue.photo %}Заменить фото{% else %}Загрузить фото{% endif %}
-                </a>
+                {% if perms.venues.change_venue %}
+                    <a href="{% url 'venues:photo' venue.slug %}" class="btn btn-sm btn-outline-primary mb-3">
+                        {% if venue.photo %}Заменить фото{% else %}Загрузить фото{% endif %}
+                    </a>
+                {% endif %}
 
                 <p class="card-text">
                     <strong>ID:</strong> {{ venue.id }},
