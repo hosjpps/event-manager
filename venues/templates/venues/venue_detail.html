@@ -17,7 +17,8 @@
                 </h1>
 
                 <p class="card-text">
-                    <strong>ID:</strong> {{ venue.id }}
+                    <strong>ID:</strong> {{ venue.id }},
+                    <strong>адрес страницы:</strong> {{ venue.get_absolute_url }}
                 </p>
 
                 <p class="card-text">
@@ -27,6 +28,7 @@
                 <p class="card-text">
                     <strong>Вместимость:</strong>
                     {{ venue.capacity }} мест
+                    {% if venue.is_large %}<span class="badge bg-info text-dark">большой зал</span>{% endif %}
                 </p>
 
                 <p class="card-text">
@@ -46,6 +48,7 @@
                         <li class="list-group-item">
                             <a href="{% url 'events:detail' event.id %}">{{ event.title }}</a>
                             – {{ event.starts_at|date:"d.m.Y H:i" }}
+                            ({{ event.get_status_display|lower }})
                         </li>
                     {% empty %}
                         <li class="list-group-item">Мероприятий нет.</li>

@@ -1,4 +1,5 @@
 from django.db import models
+from django.utils import timezone
 
 from events.models import Event
 
@@ -6,11 +7,10 @@ from events.models import Event
 class Registration(models.Model):
     """Регистрация участника на мероприятие."""
 
-    STATUS_CHOICES = [
-        ("registered", "участник"),
-        ("waitlist", "лист ожидания"),
-        ("cancelled", "отменена"),
-    ]
+    class Status(models.TextChoices):
+        REGISTERED = "registered", "Участник"
+        WAITLIST = "waitlist", "Лист ожидания"
+        CANCELLED = "cancelled", "Отменена"
 
     event = models.ForeignKey(
         Event,
@@ -21,9 +21,14 @@ class Registration(models.Model):
     participant = models.CharField("Участник", max_length=200)
     email = models.EmailField("E-mail")
     status = models.CharField(
-        "Статус", max_length=20, choices=STATUS_CHOICES, default="registered"
+        "Статус",
+        max_length=20,
+        choices=Status.choices,
+        default=Status.REGISTERED,
     )
-    registered_at = models.DateTimeField("Дата регистрации")
+    registered_at = models.DateTimeField(
+        "Дата регистрации", default=timezone.now
+    )
 
     class Meta:
         ordering = ["registered_at", "pk"]
@@ -35,5 +40,5 @@ class Registration(models.Model):
 
     def cancel(self):
         """Отменить регистрацию, сохранив только изменённое поле."""
-        self.status = "cancelled"
+        self.status = self.Status.CANCELLED
         self.save(update_fields=["status"])

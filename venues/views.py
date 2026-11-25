@@ -17,15 +17,15 @@ def venues(request):
     )
 
 
-def venue_detail(request, venue_id):
-    venue = get_object_or_404(Venue, pk=venue_id)
+def venue_detail(request, slug):
+    venue = get_object_or_404(Venue, slug=slug)
 
     day_start = timezone.make_aware(
         datetime.combine(timezone.localdate(), time.min)
     )
     day_end = day_start + timedelta(days=1)
     # Обратная связь related_name="events": мероприятия этой площадки.
-    is_free_today = not venue.events.filter(
+    is_free_today = not venue.events.active().filter(
         starts_at__lt=day_end,
         ends_at__gt=day_start,
     ).exists()
@@ -49,9 +49,12 @@ def available_venues(request):
         except ValueError:
             error = "Укажите дату в формате ГГГГ-ММ-ДД."
         else:
-            busy_venue_ids = Event.objects.filter(
-                starts_at__date=selected_date,
-            ).values_list("venue_id", flat=True)
+            # Площадку занимают только запланированные мероприятия.
+            busy_venue_ids = (
+                Event.objects.active()
+                .for_date(selected_date)
+                .values_list("venue_id", flat=True)
+            )
             venues_list = Venue.objects.exclude(
                 pk__in=busy_venue_ids,
             ).order_by("name")

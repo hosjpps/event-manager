@@ -55,13 +55,19 @@ def main() -> None:
                 },
             )
         for row in events:
+            ends_at = aware(row["ends_at"])
+            # То же правило, что в миграции events.0003: прошедшее —
+            # завершено, остальное — запланировано.
+            status = (Event.Status.COMPLETED if ends_at < timezone.now()
+                      else Event.Status.ACTIVE)
             Event.objects.update_or_create(
                 pk=row["id"],
                 defaults={
+                    "status": status,
                     "title": row["title"],
                     "venue_id": row["venue_id"],
                     "starts_at": aware(row["starts_at"]),
-                    "ends_at": aware(row["ends_at"]),
+                    "ends_at": ends_at,
                     "capacity": row["capacity"],
                     "is_published": bool(row["is_published"]),
                 },

@@ -8,7 +8,7 @@
     <h1>Мероприятия</h1>
 
     <form method="get" class="row g-2 align-items-end mb-3">
-        <div class="col-md-3">
+        <div class="col-md-2">
             <label for="date" class="form-label">Дата</label>
             <input type="date" id="date" name="date" class="form-control"
                    value="{{ event_date }}">
@@ -26,6 +26,15 @@
             </select>
         </div>
         <div class="col-md-2">
+            <label for="status" class="form-label">Статус</label>
+            <select id="status" name="status" class="form-select">
+                {% for value, label in statuses %}
+                    <option value="{{ value }}" {% if status == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+                <option value="all" {% if status == "all" %}selected{% endif %}>Все</option>
+            </select>
+        </div>
+        <div class="col-md-2">
             <label for="q" class="form-label">Название</label>
             <input type="text" id="q" name="q" class="form-control"
                    value="{{ query }}" placeholder="поиск">
@@ -38,7 +47,7 @@
                 <option value="venue" {% if sort == "venue" %}selected{% endif %}>по площадке</option>
             </select>
         </div>
-        <div class="col-md-2">
+        <div class="col-md-12">
             <button type="submit" class="btn btn-primary">Найти</button>
             <a href="{% url 'events:list' %}" class="btn btn-outline-secondary">Сброс</a>
         </div>

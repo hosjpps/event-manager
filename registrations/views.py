@@ -10,7 +10,7 @@ from .models import Registration
 def registrations(request):
     registrations_list = (
         Registration.objects
-        .exclude(status="cancelled")
+        .exclude(status=Registration.Status.CANCELLED)
         .select_related("event__venue")
         .order_by("pk")
     )
@@ -35,8 +35,15 @@ def registration_detail(request, registration_id):
 
 def statistics(request):
     totals = Registration.objects.aggregate(
-        registered=Count("pk", filter=Q(status="registered")),
-        waitlist=Count("pk", filter=Q(status="waitlist")),
+        registered=Count(
+            "pk", filter=Q(status=Registration.Status.REGISTERED)
+        ),
+        waitlist=Count("pk", filter=Q(status=Registration.Status.WAITLIST)),
+    )
+    by_status = Event.objects.aggregate(
+        active=Count("pk", filter=Q(status=Event.Status.ACTIVE)),
+        cancelled=Count("pk", filter=Q(status=Event.Status.CANCELLED)),
+        completed=Count("pk", filter=Q(status=Event.Status.COMPLETED)),
     )
     capacity = Event.objects.aggregate(
         events_count=Count("pk"),
@@ -49,7 +56,9 @@ def statistics(request):
             event_title=F("title"),
             registered_count=Count(
                 "registrations",
-                filter=Q(registrations__status="registered"),
+                filter=Q(
+                    registrations__status=Registration.Status.REGISTERED
+                ),
             ),
         )
         .values("event_title", "capacity", "registered_count")
@@ -70,7 +79,9 @@ def statistics(request):
             event_title=F("title"),
             waitlist_count=Count(
                 "registrations",
-                filter=Q(registrations__status="waitlist"),
+                filter=Q(
+                    registrations__status=Registration.Status.WAITLIST
+                ),
             ),
         )
         .filter(waitlist_count__gte=1)
@@ -82,6 +93,7 @@ def statistics(request):
         {
             "totals": totals,
             "capacity": capacity,
+            "by_status": by_status,
             "by_event": by_event,
             "by_venue": by_venue,
             "with_waitlist": with_waitlist,

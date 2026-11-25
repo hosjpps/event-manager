@@ -7,6 +7,7 @@ from django.utils import timezone
 
 from models.events import get_free_seats
 from models.registrations import get_registration_status
+from registrations.models import Registration
 from venues.models import Venue
 
 from .models import Event
@@ -36,14 +37,21 @@ def events(request):
     venue_id = request.GET.get("venue", "").strip()
     query = request.GET.get("q", "").strip()
     sort = request.GET.get("sort", "date")
+    status = request.GET.get("status", Event.Status.ACTIVE)
     error = None
 
     events_list = Event.objects.select_related("venue").annotate(
         registered=Count(
             "registrations",
-            filter=Q(registrations__status="registered"),
+            filter=Q(registrations__status=Registration.Status.REGISTERED),
         )
     )
+    # По умолчанию показываем только запланированные; "all" — все статусы.
+    if status in Event.Status.values:
+        events_list = events_list.filter(status=status)
+    elif status != "all":
+        status = Event.Status.ACTIVE
+        events_list = events_list.active()
 
     if event_date:
         try:
@@ -73,6 +81,8 @@ def events(request):
         "selected_venue": venue_id,
         "query": query,
         "sort": sort,
+        "status": status,
+        "statuses": Event.Status.choices,
         "error": error,
     }
     return render(request, "events/event_list.html", context)
@@ -83,7 +93,9 @@ def event_detail(request, event_id):
         Event.objects.select_related("venue"),
         pk=event_id,
     )
-    registered = event.registrations.filter(status="registered").count()
+    registered = event.registrations.filter(
+        status=Registration.Status.REGISTERED
+    ).count()
     free_seats = get_free_seats(event.capacity, registered)
     days_left = (timezone.localtime(event.starts_at).date()
                  - timezone.localdate()).days
@@ -97,4 +109,6 @@ def event_detail(request, event_id):
             event.is_published, free_seats, days_left
         ),
     }
+    if event.status == Event.Status.CANCELLED:
+        context["status"] = "Мероприятие отменено"
     return render(request, "events/event_detail.html", context)

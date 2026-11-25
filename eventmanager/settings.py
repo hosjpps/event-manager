@@ -43,6 +43,11 @@ INSTALLED_APPS = [
     'registrations',
 ]
 
+if DEBUG:
+    # Панель анализа SQL-запросов — только для локальной разработки.
+    INSTALLED_APPS += ['debug_toolbar']
+
+
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -52,6 +57,11 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+
+if DEBUG:
+    MIDDLEWARE.insert(1, 'debug_toolbar.middleware.DebugToolbarMiddleware')
+    INTERNAL_IPS = ['127.0.0.1']
+
 
 ROOT_URLCONF = 'eventmanager.urls'
 
@@ -65,6 +75,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'homepage.context_processors.site_stats',
             ],
         },
     },

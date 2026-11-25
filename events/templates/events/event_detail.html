@@ -18,7 +18,7 @@
 
                 <p class="card-text">
                     <strong>Площадка:</strong>
-                    <a href="{% url 'venues:detail' event.venue.id %}">
+                    <a href="{{ event.venue.get_absolute_url }}">
                         {{ event.venue.name }}
                     </a>
                 </p>
@@ -29,6 +29,10 @@
                     {% if days_left >= 0 %}
                         (через {{ days_left }} дн.)
                     {% endif %}
+                </p>
+
+                <p class="card-text">
+                    <strong>Статус:</strong> {{ event.get_status_display }}
                 </p>
 
                 <p class="card-text">

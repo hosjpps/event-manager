@@ -6,9 +6,15 @@
 
         <p class="card-text">
             {{ event.starts_at|date:"d.m.Y H:i" }},
-            <a href="{% url 'venues:detail' event.venue.id %}">
+            <a href="{{ event.venue.get_absolute_url }}">
                 {{ event.venue.name }}
             </a>
+        </p>
+
+        <p class="card-text">
+            <span class="badge {% if event.status == 'active' %}bg-success{% elif event.status == 'cancelled' %}bg-danger{% else %}bg-secondary{% endif %}">
+                {{ event.get_status_display }}
+            </span>
         </p>
 
         {% if event.registered is not None %}

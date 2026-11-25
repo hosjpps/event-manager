@@ -6,7 +6,7 @@ pytestmark = pytest.mark.usefixtures("sample_data")
 PAGES = [
     "/",
     "/venues/",
-    "/venues/1/",
+    "/venues/aktovyy-zal-1/",
     "/events/",
     "/events/1/",
     "/registrations/",
@@ -16,6 +16,7 @@ PAGES = [
 ]
 MISSING = [
     "/venues/999/",
+    "/venues/no-such-venue/",
     "/events/999/",
     "/registrations/999/",
 ]
@@ -37,8 +38,8 @@ def test_unknown_url_gives_404(client):
     assert client.get("/nonexistent/").status_code == 404
 
 
-def test_non_numeric_id_does_not_match_route(client):
-    assert client.get("/venues/abc/").status_code == 404
+def test_non_numeric_id_does_not_match_event_route(client):
+    assert client.get("/events/abc/").status_code == 404
 
 
 def test_custom_404_page_when_debug_is_off(client):
@@ -61,7 +62,7 @@ def test_venues_page_shows_data_from_database(client):
 
 
 def test_venue_page_lists_its_events_via_related_name(client):
-    html = client.get("/venues/1/").content.decode()
+    html = client.get("/venues/aktovyy-zal-1/").content.decode()
     assert "Лекция «Введение в Django»" in html
     assert "Карьерный день" in html
 
@@ -85,10 +86,10 @@ def test_event_page_shows_related_venue_and_counts(client):
 
 
 def test_events_are_paginated(client):
-    first = client.get("/events/").context
+    first = client.get("/events/?status=all").context
     assert first["total"] == 10
     assert len(first["events"]) == 5
-    second = client.get("/events/?page=2").context
+    second = client.get("/events/?status=all&page=2").context
     assert second["page_obj"].number == 2
 
 
@@ -97,7 +98,7 @@ def test_bad_page_number_opens_first_page(client):
 
 
 def test_events_filter_by_venue_and_sort_by_title(client):
-    context = client.get("/events/?venue=1&sort=title").context
+    context = client.get("/events/?status=all&venue=1&sort=title").context
     titles = [event.title for event in context["events"]]
     assert context["total"] == 4
     assert titles == sorted(titles)
@@ -109,7 +110,8 @@ def test_events_filter_by_date(client):
 
 
 def test_events_search_ignores_case_for_cyrillic(client):
-    assert client.get("/events/?q=лекция").context["total"] == 2
+    assert client.get(
+        "/events/?status=all&q=лекция").context["total"] == 2
 
 
 def test_events_bad_date_shows_error(client):
@@ -124,7 +126,7 @@ def test_pagination_keeps_filters(client):
 
 def test_available_venues_for_busy_date(client):
     html = client.get(
-        "/venues/available/?date=2026-10-15").content.decode()
+        "/venues/available/?date=2026-12-03").content.decode()
     assert "Актовый зал" not in html
     assert "Коворкинг" in html
 
@@ -147,3 +149,30 @@ def test_statistics_page(client):
     assert "в листе ожидания: 2" in html
     assert "Мероприятий: 10" in html
     assert "Семинар по Django ORM: в очереди 1" in html
+
+
+def test_events_list_shows_only_active_by_default(client):
+    from events.models import Event
+    Event.objects.filter(pk=4).update(status=Event.Status.CANCELLED)
+    titles = [e.title for e in client.get("/events/").context["events"]]
+    assert "Мастер-класс по Docker" not in titles
+    cancelled = client.get("/events/?status=cancelled").context["events"]
+    assert [e.title for e in cancelled] == ["Мастер-класс по Docker"]
+
+
+def test_cancelled_event_does_not_block_venue(client):
+    from events.models import Event
+    Event.objects.filter(pk=4).update(status=Event.Status.CANCELLED)
+    html = client.get(
+        "/venues/available/?date=2026-12-03").content.decode()
+    assert "Актовый зал" in html
+
+
+def test_statistics_counts_event_statuses(client):
+    html = client.get("/registrations/statistics/").content.decode()
+    assert "завершено: 3" in html
+
+
+def test_footer_uses_context_processor(client):
+    html = client.get("/").content.decode()
+    assert "площадок: 3" in html
