@@ -1,15 +1,15 @@
-from datetime import date
-
+from django.contrib import messages
 from django.core.paginator import Paginator
 from django.db.models import Count, Q
-from django.shortcuts import get_object_or_404, render
+from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
+from django.views.decorators.http import require_POST
 
 from models.events import get_free_seats
 from models.registrations import get_registration_status
 from registrations.models import Registration
-from venues.models import Venue
 
+from .forms import EventFilterForm, EventForm
 from .models import Event
 
 EVENTS_PER_PAGE = 5
@@ -33,57 +33,41 @@ def title_matches(query):
 
 
 def events(request):
-    event_date = request.GET.get("date", "").strip()
-    venue_id = request.GET.get("venue", "").strip()
-    query = request.GET.get("q", "").strip()
-    sort = request.GET.get("sort", "date")
-    status = request.GET.get("status", Event.Status.ACTIVE)
-    error = None
-
+    form = EventFilterForm(request.GET or None)
     events_list = Event.objects.select_related("venue").annotate(
         registered=Count(
             "registrations",
             filter=Q(registrations__status=Registration.Status.REGISTERED),
         )
     )
-    # По умолчанию показываем только запланированные; "all" — все статусы.
-    if status in Event.Status.values:
+    status = Event.Status.ACTIVE
+    sort = "date"
+
+    # Неверные значения не роняют страницу: форма покажет ошибки,
+    # а список останется без фильтров по этим полям.
+    if form.is_valid():
+        data = form.cleaned_data
+        status = data["status"] or Event.Status.ACTIVE
+        sort = data["sort"] or "date"
+        if data["date"]:
+            events_list = events_list.for_date(data["date"])
+        if data["venue"]:
+            events_list = events_list.filter(venue=data["venue"])
+        if data["q"]:
+            events_list = events_list.filter(title_matches(data["q"]))
+
+    if status != "all":
         events_list = events_list.filter(status=status)
-    elif status != "all":
-        status = Event.Status.ACTIVE
-        events_list = events_list.active()
-
-    if event_date:
-        try:
-            selected_date = date.fromisoformat(event_date)
-        except ValueError:
-            error = "Укажите дату в формате ГГГГ-ММ-ДД."
-        else:
-            events_list = events_list.filter(starts_at__date=selected_date)
-    if venue_id.isdigit():
-        events_list = events_list.filter(venue_id=int(venue_id))
-    if query:
-        events_list = events_list.filter(title_matches(query))
-
-    sort_field = SORT_FIELDS.get(sort, "starts_at")
-    events_list = events_list.order_by(sort_field, "pk")
+    events_list = events_list.order_by(SORT_FIELDS[sort], "pk")
 
     page_obj = Paginator(events_list, EVENTS_PER_PAGE).get_page(
         request.GET.get("page")
     )
-
     context = {
+        "form": form,
         "page_obj": page_obj,
         "events": page_obj.object_list,
         "total": page_obj.paginator.count,
-        "venues": Venue.objects.order_by("name"),
-        "event_date": event_date,
-        "selected_venue": venue_id,
-        "query": query,
-        "sort": sort,
-        "status": status,
-        "statuses": Event.Status.choices,
-        "error": error,
     }
     return render(request, "events/event_list.html", context)
 
@@ -112,3 +96,39 @@ def event_detail(request, event_id):
     if event.status == Event.Status.CANCELLED:
         context["status"] = "Мероприятие отменено"
     return render(request, "events/event_detail.html", context)
+
+
+def event_create(request):
+    form = EventForm(request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        event = form.save()
+        messages.success(request, "Мероприятие создано.")
+        return redirect("events:detail", event_id=event.pk)
+    return render(
+        request,
+        "events/event_form.html",
+        {"form": form, "is_edit": False},
+    )
+
+
+def event_update(request, event_id):
+    event = get_object_or_404(Event, pk=event_id)
+    form = EventForm(request.POST or None, instance=event)
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        messages.success(request, "Изменения сохранены.")
+        return redirect("events:detail", event_id=event.pk)
+    return render(
+        request,
+        "events/event_form.html",
+        {"form": form, "is_edit": True, "event": event},
+    )
+
+
+@require_POST
+def event_cancel(request, event_id):
+    event = get_object_or_404(Event, pk=event_id)
+    event.status = Event.Status.CANCELLED
+    event.save(update_fields=["status"])
+    messages.success(request, "Мероприятие отменено, площадка освобождена.")
+    return redirect("events:detail", event_id=event.pk)

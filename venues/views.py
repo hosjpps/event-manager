@@ -1,10 +1,12 @@
 from datetime import date, datetime, time, timedelta
 
-from django.shortcuts import get_object_or_404, render
+from django.contrib import messages
+from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
 from events.models import Event
 
+from .forms import VenuePhotoForm
 from .models import Venue
 
 
@@ -67,4 +69,22 @@ def available_venues(request):
             "event_date": event_date,
             "error": error,
         },
+    )
+
+
+def venue_photo(request, slug):
+    venue = get_object_or_404(Venue, slug=slug)
+    if request.method == "POST":
+        # Файлы приходят отдельно от полей формы — в request.FILES.
+        form = VenuePhotoForm(request.POST, request.FILES, instance=venue)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Фото сохранено.")
+            return redirect(venue)
+    else:
+        form = VenuePhotoForm(instance=venue)
+    return render(
+        request,
+        "venues/venue_photo.html",
+        {"form": form, "venue": venue},
     )

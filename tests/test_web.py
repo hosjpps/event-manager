@@ -115,8 +115,9 @@ def test_events_search_ignores_case_for_cyrillic(client):
 
 
 def test_events_bad_date_shows_error(client):
-    html = client.get("/events/?date=15.10.2026").content.decode()
-    assert "ГГГГ-ММ-ДД" in html
+    response = client.get("/events/?date=2026-13-45")
+    assert response.status_code == 200
+    assert "date" in response.context["form"].errors
 
 
 def test_pagination_keeps_filters(client):
@@ -176,3 +177,8 @@ def test_statistics_counts_event_statuses(client):
 def test_footer_uses_context_processor(client):
     html = client.get("/").content.decode()
     assert "площадок: 3" in html
+
+
+def test_events_filter_accepts_russian_date_format(client):
+    context = client.get("/events/?date=12.12.2026").context
+    assert [e.title for e in context["events"]] == ["Семинар по Django ORM"]

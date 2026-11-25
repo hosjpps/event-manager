@@ -23,6 +23,13 @@ class Venue(models.Model):
         "Вместимость, чел.",
         help_text="Сколько человек одновременно помещается на площадке.",
     )
+    photo = models.ImageField(
+        "Фото",
+        upload_to="venues/",
+        blank=True,
+        null=True,
+        help_text="JPG или PNG, не больше 2 МБ.",
+    )
     # Признак считает сама база данных при каждой записи.
     is_large = models.GeneratedField(
         expression=models.ExpressionWrapper(

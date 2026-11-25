@@ -19,3 +19,7 @@ body {
 .registration-status {
     font-weight: 600;
 }
+.venue-photo {
+    max-height: 320px;
+    object-fit: cover;
+}

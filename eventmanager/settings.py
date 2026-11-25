@@ -61,6 +61,8 @@ MIDDLEWARE = [
 if DEBUG:
     MIDDLEWARE.insert(1, 'debug_toolbar.middleware.DebugToolbarMiddleware')
     INTERNAL_IPS = ['127.0.0.1']
+    # Панель свёрнута в ярлык справа, чтобы не перекрывать страницу.
+    DEBUG_TOOLBAR_CONFIG = {'SHOW_COLLAPSED': True}
 
 
 ROOT_URLCONF = 'eventmanager.urls'
@@ -130,6 +132,10 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
 STATIC_URL = 'static/'
+
+# Загруженные пользователями файлы (фото площадок).
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field

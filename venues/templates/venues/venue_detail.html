@@ -16,6 +16,16 @@
                     {{ venue.name }}
                 </h1>
 
+                {% if venue.photo %}
+                    <img src="{{ venue.photo.url }}" alt="{{ venue.name }}"
+                         class="img-fluid rounded mb-3 venue-photo">
+                {% else %}
+                    <p class="text-muted">Фото не загружено.</p>
+                {% endif %}
+                <a href="{% url 'venues:photo' venue.slug %}" class="btn btn-sm btn-outline-primary mb-3">
+                    {% if venue.photo %}Заменить фото{% else %}Загрузить фото{% endif %}
+                </a>
+
                 <p class="card-text">
                     <strong>ID:</strong> {{ venue.id }},
                     <strong>адрес страницы:</strong> {{ venue.get_absolute_url }}

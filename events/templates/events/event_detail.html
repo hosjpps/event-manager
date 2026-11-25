@@ -54,6 +54,20 @@
                         <span class="badge bg-danger">{{ status }}</span>
                     {% endif %}
                 </p>
+
+                {% if event.status == "active" %}
+                    <div class="d-flex gap-2 mt-3">
+                        <a href="{% url 'events:edit' event.id %}" class="btn btn-primary">
+                            Редактировать
+                        </a>
+                        <form method="post" action="{% url 'events:cancel' event.id %}">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-outline-danger">
+                                Отменить мероприятие
+                            </button>
+                        </form>
+                    </div>
+                {% endif %}
             </div>
         </div>
     {% else %}
